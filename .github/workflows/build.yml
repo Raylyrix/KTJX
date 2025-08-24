@@ -1,0 +1,123 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build application
+        run: npm run build
+        
+      - name: Build Electron app
+        run: npm run dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-build
+          path: |
+            release/
+            dist/
+            
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/windows-latest-build/release/*.exe
+            artifacts/macos-latest-build/release/*.pkg
+            artifacts/ubuntu-latest-build/release/*.AppImage
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  auto-update:
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install electron-updater
+        run: npm install electron-updater
+        
+      - name: Generate update files
+        run: |
+          node -e "
+            const { autoUpdater } = require('electron-updater');
+            const fs = require('fs');
+            
+            const version = process.env.GITHUB_REF.replace('refs/tags/v', '');
+            const updateInfo = {
+              version: version,
+              files: [
+                {
+                  url: 'https://github.com/${{ github.repository }}/releases/download/v' + version + '/Gmail-Campaign-Desktop-' + version + '-win.exe',
+                  sha512: 'placeholder',
+                  size: 0
+                },
+                {
+                  url: 'https://github.com/${{ github.repository }}/releases/download/v' + version + '/Gmail-Campaign-Desktop-' + version + '.pkg',
+                  sha512: 'placeholder',
+                  size: 0
+                }
+              ],
+              path: 'Gmail-Campaign-Desktop-' + version + '-win.exe',
+              sha512: 'placeholder',
+              releaseDate: new Date().toISOString()
+            };
+            
+            fs.writeFileSync('latest.yml', JSON.stringify(updateInfo, null, 2));
+          "
+          
+      - name: Upload update file
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-info
+          path: latest.yml
