@@ -6,6 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+  security-events: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}

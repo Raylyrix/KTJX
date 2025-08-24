@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { google } from 'googleapis'
 
 function createWindow(): void {
   // Create the browser window.
@@ -69,16 +70,125 @@ app.on('window-all-closed', () => {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
+// Google OAuth credentials (hardcoded as requested)
+const GOOGLE_CREDENTIALS = {
+  client_id: "817286133901-77vi2ruk7k8etatv2hfeeshaqmc85e5h.apps.googleusercontent.com",
+  client_secret: "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",
+  redirect_uri: "http://localhost"
+}
+
+const SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'https://www.googleapis.com/auth/spreadsheets'
+]
+
 // IPC handlers for Google OAuth
-ipcMain.handle('google-oauth-start', async () => {
-  // This would handle the OAuth flow
-  // For now, we'll return a mock response
-  return { success: true, message: 'OAuth flow started' }
+ipcMain.handle('startGoogleOAuth', async () => {
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      GOOGLE_CREDENTIALS.client_id,
+      GOOGLE_CREDENTIALS.client_secret,
+      GOOGLE_CREDENTIALS.redirect_uri
+    )
+
+    // Generate auth URL
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: SCOPES,
+      prompt: 'consent'
+    })
+
+    // Open auth window
+    const authWindow = new BrowserWindow({
+      width: 500,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    })
+
+    authWindow.loadURL(authUrl)
+
+    // Handle OAuth callback
+    return new Promise((resolve, reject) => {
+      authWindow.webContents.on('will-redirect', async (event, url) => {
+        if (url.startsWith(GOOGLE_CREDENTIALS.redirect_uri)) {
+          const urlObj = new URL(url)
+          const code = urlObj.searchParams.get('code')
+          
+          if (code) {
+            try {
+              const { tokens } = await oauth2Client.getToken(code)
+              
+              if (!tokens.access_token) {
+                throw new Error('No access token received')
+              }
+
+              // Get user info
+              oauth2Client.setCredentials(tokens)
+              const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
+              const profile = await gmail.users.getProfile({ userId: 'me' })
+              
+              authWindow.close()
+              
+              resolve({
+                success: true,
+                email: profile.data.emailAddress || 'unknown',
+                accessToken: tokens.access_token,
+                refreshToken: tokens.refresh_token || '',
+                expiryDate: tokens.expiry_date || Date.now() + 3600000,
+                signature: `Best regards,\n${profile.data.emailAddress || 'User'}\nGmail Campaign Manager`
+              })
+            } catch (error) {
+              console.error('OAuth error:', error)
+              authWindow.close()
+              reject({ success: false, error: 'OAuth authentication failed' })
+            }
+          }
+        }
+      })
+
+      authWindow.on('closed', () => {
+        resolve({ success: false, error: 'Authentication window was closed' })
+      })
+    })
+  } catch (error) {
+    console.error('OAuth start error:', error)
+    return { success: false, error: 'Failed to start OAuth' }
+  }
 })
 
-ipcMain.handle('google-oauth-callback', async (event, code) => {
-  // Handle OAuth callback
-  return { success: true, accessToken: 'mock-token' }
+ipcMain.handle('refreshGoogleToken', async (event, refreshToken: string) => {
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      GOOGLE_CREDENTIALS.client_id,
+      GOOGLE_CREDENTIALS.client_secret,
+      GOOGLE_CREDENTIALS.redirect_uri
+      )
+
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken
+    })
+
+    const { credentials } = await oauth2Client.refreshAccessToken()
+    
+    if (credentials.access_token) {
+      return {
+        success: true,
+        accessToken: credentials.access_token,
+        expiryDate: credentials.expiry_date || Date.now() + 3600000
+      }
+    }
+    
+    return { success: false, error: 'Failed to refresh token' }
+  } catch (error) {
+    console.error('Token refresh error:', error)
+    return { success: false, error: 'Token refresh failed' }
+  }
 })
 
 // IPC handlers for file operations
