@@ -17,7 +17,14 @@
     "dist:linux": "npm run build && electron-builder --linux",
     "postinstall": "electron-builder install-app-deps"
   },
-  "keywords": ["gmail", "campaign", "desktop", "electron", "oauth", "google-sheets"],
+  "keywords": [
+    "gmail",
+    "campaign",
+    "desktop",
+    "electron",
+    "oauth",
+    "google-sheets"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
@@ -40,6 +47,7 @@
     "vite": "^5.0.8"
   },
   "dependencies": {
+    "@electron-toolkit/utils": "^4.0.0",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.0.4",
