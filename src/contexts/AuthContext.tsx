@@ -27,23 +27,35 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<GmailSession[]>([])
+  const [isMounted, setIsMounted] = useState(false)
 
   // Load sessions from localStorage on mount
   useEffect(() => {
-    const savedSessions = localStorage.getItem('gmail_sessions')
-    if (savedSessions) {
-      try {
-        setSessions(JSON.parse(savedSessions))
-      } catch (error) {
-        console.error('Failed to load saved sessions:', error)
+    setIsMounted(true)
+    
+    try {
+      const savedSessions = localStorage.getItem('gmail_sessions')
+      if (savedSessions) {
+        const parsed = JSON.parse(savedSessions)
+        if (Array.isArray(parsed)) {
+          setSessions(parsed)
+        }
       }
+    } catch (error) {
+      console.error('Failed to load saved sessions:', error)
     }
   }, [])
 
   // Save sessions to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('gmail_sessions', JSON.stringify(sessions))
-  }, [sessions])
+    if (!isMounted) return
+    
+    try {
+      localStorage.setItem('gmail_sessions', JSON.stringify(sessions))
+    } catch (error) {
+      console.error('Failed to save sessions:', error)
+    }
+  }, [sessions, isMounted])
 
   const addSession = useCallback((session: GmailSession) => {
     setSessions(prev => {
@@ -151,6 +163,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSession,
     authenticateGmail,
     refreshToken
+  }
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <AuthContext.Provider value={{
+        sessions: [],
+        addSession: () => {},
+        removeSession: () => {},
+        getSession: () => undefined,
+        authenticateGmail: async () => null,
+        refreshToken: async () => false
+      }}>
+        {children}
+      </AuthContext.Provider>
+    )
   }
 
   return (

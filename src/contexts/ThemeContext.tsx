@@ -11,14 +11,23 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme')
-    return (saved as Theme) || 'system'
-  })
-
+  const [theme, setTheme] = useState<Theme>('light') // Default to light to prevent SSR issues
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
+    setIsMounted(true)
+    
+    // Load theme from localStorage only after component mounts
+    const saved = localStorage.getItem('theme')
+    if (saved && ['light', 'dark', 'system'].includes(saved)) {
+      setTheme(saved as Theme)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isMounted) return
+    
     localStorage.setItem('theme', theme)
     
     const updateResolvedTheme = () => {
@@ -39,7 +48,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mediaQuery.addEventListener('change', updateResolvedTheme)
       return () => mediaQuery.removeEventListener('change', updateResolvedTheme)
     }
-  }, [theme])
+  }, [theme, isMounted])
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <ThemeContext.Provider value={{ theme: 'light', setTheme, resolvedTheme: 'light' }}>
+        {children}
+      </ThemeContext.Provider>
+    )
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>

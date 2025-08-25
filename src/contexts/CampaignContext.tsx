@@ -1,61 +1,48 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { google } from 'googleapis'
-import toast from 'react-hot-toast'
+import { generateId } from '@/lib/utils'
 
 interface CampaignTemplate {
   id: string
   name: string
   subject: string
   body: string
-  placeholders: string[]
-  attachments: string[]
-  createdAt: Date
+  createdAt: number
+  updatedAt: number
 }
 
 interface CampaignHistory {
   id: string
   sessionId: string
-  templateId?: string
   subject: string
   body: string
-  recipients: number
-  sent: number
-  failed: number
-  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed'
-  scheduledAt?: Date
-  startedAt?: Date
-  completedAt?: Date
-  error?: string
+  status: 'scheduled' | 'sending' | 'completed' | 'failed'
+  scheduledFor?: number
+  sentCount: number
+  totalCount: number
+  createdAt: number
+  completedAt?: number
 }
 
 interface GoogleSheetData {
-  spreadsheetId: string
-  sheetName: string
+  id: string
+  name: string
   headers: string[]
   rows: Record<string, any>[]
-  totalRows: number
+  rowCount: number
 }
 
 interface CampaignContextType {
   templates: CampaignTemplate[]
   history: CampaignHistory[]
   currentSheet: GoogleSheetData | null
-  addTemplate: (template: Omit<CampaignTemplate, 'id' | 'createdAt'>) => void
+  addTemplate: (template: Omit<CampaignTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void
   updateTemplate: (id: string, updates: Partial<CampaignTemplate>) => void
   deleteTemplate: (id: string) => void
   getTemplate: (id: string) => CampaignTemplate | undefined
-  addHistory: (history: Omit<CampaignHistory, 'id'>) => void
+  addHistory: (campaign: Omit<CampaignHistory, 'id' | 'createdAt'>) => void
   updateHistory: (id: string, updates: Partial<CampaignHistory>) => void
   loadGoogleSheet: (url: string, sessionId: string) => Promise<boolean>
-  sendCampaign: (campaign: {
-    sessionId: string
-    templateId?: string
-    subject: string
-    body: string
-    scheduledAt?: Date
-    batchSize?: number
-    batchInterval?: number
-  }) => Promise<string>
+  sendCampaign: (campaign: { sessionId: string; subject: string; body: string }) => Promise<string>
 }
 
 const CampaignContext = createContext<CampaignContextType | undefined>(undefined)
@@ -64,165 +51,156 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const [templates, setTemplates] = useState<CampaignTemplate[]>([])
   const [history, setHistory] = useState<CampaignHistory[]>([])
   const [currentSheet, setCurrentSheet] = useState<GoogleSheetData | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
   // Load data from localStorage on mount
   useEffect(() => {
-    const savedTemplates = localStorage.getItem('campaign_templates')
-    const savedHistory = localStorage.getItem('campaign_history')
+    setIsMounted(true)
     
-    if (savedTemplates) {
-      try {
+    try {
+      const savedTemplates = localStorage.getItem('campaign_templates')
+      if (savedTemplates) {
         const parsed = JSON.parse(savedTemplates)
-        setTemplates(parsed.map((t: any) => ({
-          ...t,
-          createdAt: new Date(t.createdAt)
-        })))
-      } catch (error) {
-        console.error('Failed to load templates:', error)
+        if (Array.isArray(parsed)) {
+          setTemplates(parsed)
+        }
       }
+    } catch (error) {
+      console.error('Failed to load templates:', error)
     }
-    
-    if (savedHistory) {
-      try {
+
+    try {
+      const savedHistory = localStorage.getItem('campaign_history')
+      if (savedHistory) {
         const parsed = JSON.parse(savedHistory)
-        setHistory(parsed.map((h: any) => ({
-          ...h,
-          scheduledAt: h.scheduledAt ? new Date(h.scheduledAt) : undefined,
-          startedAt: h.startedAt ? new Date(h.startedAt) : undefined,
-          completedAt: h.completedAt ? new Date(h.completedAt) : undefined
-        })))
-      } catch (error) {
-        console.error('Failed to load history:', error)
+        if (Array.isArray(parsed)) {
+          setHistory(parsed)
+        }
       }
+    } catch (error) {
+      console.error('Failed to load history:', error)
     }
   }, [])
 
   // Save data to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('campaign_templates', JSON.stringify(templates))
-  }, [templates])
+    if (!isMounted) return
+    
+    try {
+      localStorage.setItem('campaign_templates', JSON.stringify(templates))
+    } catch (error) {
+      console.error('Failed to save templates:', error)
+    }
+  }, [templates, isMounted])
 
   useEffect(() => {
-    localStorage.setItem('campaign_history', JSON.stringify(history))
-  }, [history])
+    if (!isMounted) return
+    
+    try {
+      localStorage.setItem('campaign_history', JSON.stringify(history))
+    } catch (error) {
+      console.error('Failed to save history:', error)
+    }
+  }, [history, isMounted])
 
-  const addTemplate = useCallback((template: Omit<CampaignTemplate, 'id' | 'createdAt'>) => {
+  const addTemplate = useCallback((template: Omit<CampaignTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newTemplate: CampaignTemplate = {
       ...template,
-      id: `template_${Date.now()}`,
-      createdAt: new Date()
+      id: generateId(),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     }
     setTemplates(prev => [...prev, newTemplate])
-    toast.success('Template saved successfully')
   }, [])
 
   const updateTemplate = useCallback((id: string, updates: Partial<CampaignTemplate>) => {
-    setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+    setTemplates(prev => prev.map(template => 
+      template.id === id 
+        ? { ...template, ...updates, updatedAt: Date.now() }
+        : template
+    ))
   }, [])
 
   const deleteTemplate = useCallback((id: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== id))
-    toast.success('Template deleted')
+    setTemplates(prev => prev.filter(template => template.id !== id))
   }, [])
 
   const getTemplate = useCallback((id: string) => {
-    return templates.find(t => t.id === id)
+    return templates.find(template => template.id === id)
   }, [templates])
 
-  const addHistory = useCallback((historyItem: Omit<CampaignHistory, 'id'>) => {
-    const newHistory: CampaignHistory = {
-      ...historyItem,
-      id: `history_${Date.now()}`
+  const addHistory = useCallback((campaign: Omit<CampaignHistory, 'id' | 'createdAt'>) => {
+    const newCampaign: CampaignHistory = {
+      ...campaign,
+      id: generateId(),
+      createdAt: Date.now()
     }
-    setHistory(prev => [...prev, newHistory])
+    setHistory(prev => [...prev, newCampaign])
   }, [])
 
   const updateHistory = useCallback((id: string, updates: Partial<CampaignHistory>) => {
-    setHistory(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h))
+    setHistory(prev => prev.map(campaign => 
+      campaign.id === id ? { ...campaign, ...updates } : campaign
+    ))
   }, [])
 
   const loadGoogleSheet = useCallback(async (url: string, sessionId: string): Promise<boolean> => {
     try {
-      // Extract spreadsheet ID from URL
-      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
-      if (!match) {
-        toast.error('Invalid Google Sheets URL')
-        return false
-      }
-
-      const spreadsheetId = match[1]
-      
-      // For now, we'll create a mock sheet structure
-      // In a real implementation, you'd use the Google Sheets API
-      const mockSheet: GoogleSheetData = {
-        spreadsheetId,
-        sheetName: 'Sheet1',
-        headers: ['email', 'name', 'company', 'role'],
+      // Mock Google Sheets data for now
+      const mockData: GoogleSheetData = {
+        id: 'mock_sheet_1',
+        name: 'Campaign Recipients',
+        headers: ['name', 'email', 'company', 'role'],
         rows: [
-          { email: 'john@example.com', name: 'John Doe', company: 'Tech Corp', role: 'Developer' },
-          { email: 'jane@example.com', name: 'Jane Smith', company: 'Design Inc', role: 'Designer' },
-          { email: 'bob@example.com', name: 'Bob Johnson', company: 'Marketing Co', role: 'Manager' }
+          { name: 'John Doe', email: 'john@example.com', company: 'Tech Corp', role: 'Manager' },
+          { name: 'Jane Smith', email: 'jane@example.com', company: 'Design Studio', role: 'Designer' },
+          { name: 'Bob Johnson', email: 'bob@example.com', company: 'Marketing Inc', role: 'Director' }
         ],
-        totalRows: 3
+        rowCount: 3
       }
-
-      setCurrentSheet(mockSheet)
-      toast.success('Google Sheet loaded successfully')
+      
+      setCurrentSheet(mockData)
       return true
     } catch (error) {
       console.error('Failed to load Google Sheet:', error)
-      toast.error('Failed to load Google Sheet')
       return false
     }
   }, [])
 
-  const sendCampaign = useCallback(async (campaign: {
-    sessionId: string
-    templateId?: string
-    subject: string
-    body: string
-    scheduledAt?: Date
-    batchSize?: number
-    batchInterval?: number
-  }): Promise<string> => {
-    const campaignId = `campaign_${Date.now()}`
-    
-    // Add to history
-    const historyItem: Omit<CampaignHistory, 'id'> = {
-      sessionId: campaign.sessionId,
-      templateId: campaign.templateId,
-      subject: campaign.subject,
-      body: campaign.body,
-      recipients: currentSheet?.totalRows || 0,
-      sent: 0,
-      failed: 0,
-      status: campaign.scheduledAt ? 'scheduled' : 'draft',
-      scheduledAt: campaign.scheduledAt
-    }
-
-    addHistory(historyItem)
-
-    if (campaign.scheduledAt) {
-      // Schedule campaign
-      const delay = campaign.scheduledAt.getTime() - Date.now()
+  const sendCampaign = useCallback(async (campaign: { sessionId: string; subject: string; body: string }): Promise<string> => {
+    try {
+      // Mock campaign sending
+      const campaignId = generateId()
+      
+      addHistory({
+        sessionId: campaign.sessionId,
+        subject: campaign.subject,
+        body: campaign.body,
+        status: 'scheduled',
+        scheduledFor: Date.now() + 60000, // 1 minute from now
+        sentCount: 0,
+        totalCount: currentSheet?.rowCount || 0
+      })
+      
+      // Simulate sending process
       setTimeout(() => {
-        updateHistory(campaignId, { status: 'sending', startedAt: new Date() })
-        // Start sending emails
-        // This would integrate with the Gmail API
-      }, delay)
+        updateHistory(campaignId, { status: 'sending' })
+        
+        setTimeout(() => {
+          updateHistory(campaignId, { 
+            status: 'completed', 
+            completedAt: Date.now(),
+            sentCount: currentSheet?.rowCount || 0
+          })
+        }, 5000)
+      }, 1000)
       
-      toast.success(`Campaign scheduled for ${campaign.scheduledAt.toLocaleString()}`)
-    } else {
-      // Send immediately
-      updateHistory(campaignId, { status: 'sending', startedAt: new Date() })
-      // Start sending emails
-      // This would integrate with the Gmail API
-      
-      toast.success('Campaign started')
+      return campaignId
+    } catch (error) {
+      console.error('Failed to send campaign:', error)
+      throw error
     }
-
-    return campaignId
-  }, [currentSheet, addHistory, updateHistory])
+  }, [addHistory, updateHistory, currentSheet])
 
   const value: CampaignContextType = {
     templates,
@@ -236,6 +214,27 @@ export function CampaignProvider({ children }: { children: React.ReactNode }) {
     updateHistory,
     loadGoogleSheet,
     sendCampaign
+  }
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <CampaignContext.Provider value={{
+        templates: [],
+        history: [],
+        currentSheet: null,
+        addTemplate: () => {},
+        updateTemplate: () => {},
+        deleteTemplate: () => {},
+        getTemplate: () => undefined,
+        addHistory: () => {},
+        updateHistory: () => {},
+        loadGoogleSheet: async () => false,
+        sendCampaign: async () => ''
+      }}>
+        {children}
+      </CampaignContext.Provider>
+    )
   }
 
   return (
