@@ -62,6 +62,11 @@ jobs:
         with:
           path: artifacts
           
+      - name: List artifacts
+        run: |
+          echo "Available artifacts:"
+          find artifacts -type f -name "*" | head -20
+          
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -89,15 +94,12 @@ jobs:
         with:
           node-version: '18'
           
-      - name: Install electron-updater
-        run: npm install electron-updater
+      - name: Setup update generation
+        run: echo "Update files will be generated"
         
       - name: Generate update files
         run: |
           node -e "
-            const { autoUpdater } = require('electron-updater');
-            const fs = require('fs');
-            
             const version = process.env.GITHUB_REF.replace('refs/tags/v', '');
             const updateInfo = {
               version: version,
@@ -111,6 +113,11 @@ jobs:
                   url: 'https://github.com/${{ github.repository }}/releases/download/v' + version + '/Gmail-Campaign-Desktop-' + version + '.pkg',
                   sha512: 'placeholder',
                   size: 0
+                },
+                {
+                  url: 'https://github.com/${{ github.repository }}/releases/download/v' + version + '/Gmail-Campaign-Desktop-' + version + '.AppImage',
+                  sha512: 'placeholder',
+                  size: 0
                 }
               ],
               path: 'Gmail-Campaign-Desktop-' + version + '-win.exe',
@@ -118,7 +125,7 @@ jobs:
               releaseDate: new Date().toISOString()
             };
             
-            fs.writeFileSync('latest.yml', JSON.stringify(updateInfo, null, 2));
+            require('fs').writeFileSync('latest.yml', JSON.stringify(updateInfo, null, 2));
           "
           
       - name: Upload update file
