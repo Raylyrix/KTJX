@@ -3,7 +3,10 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Image, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
+import Image from '@tiptap/extension-image'
+import TextAlign from '@tiptap/extension-text-align'
+import TextStyle from '@tiptap/extension-text-style'
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -27,7 +30,16 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
         HTMLAttributes: {
           class: 'text-blue-600 underline cursor-pointer'
         }
-      })
+      }),
+      Image.configure({
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded'
+        }
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph']
+      }),
+      TextStyle
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -105,9 +117,10 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
           >
             <UnderlineIcon className="h-4 w-4" />
           </Button>
-          
-          <div className="w-px h-6 bg-border mx-2" />
-          
+        </div>
+
+        {/* Lists */}
+        <div className="flex items-center space-x-1">
           <Button
             variant={editor.isActive('bulletList') ? 'default' : 'ghost'}
             size="sm"
@@ -127,30 +140,19 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
           >
             <ListOrdered className="h-4 w-4" />
           </Button>
-          
-          <div className="w-px h-6 bg-border mx-2" />
-          
-          {isLinkActive ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={removeLink}
-              className="h-8 w-8 p-0"
-              title="Remove Link"
-            >
-              <LinkIcon className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={addLink}
-              className="h-8 w-8 p-0"
-              title="Add Link"
-            >
-              <LinkIcon className="h-4 w-4" />
-            </Button>
-          )}
+        </div>
+
+        {/* Links and Images */}
+        <div className="flex items-center space-x-1">
+          <Button
+            variant={isLinkActive ? 'default' : 'ghost'}
+            size="sm"
+            onClick={isLinkActive ? removeLink : addLink}
+            className="h-8 w-8 p-0"
+            title={isLinkActive ? 'Remove Link' : 'Add Link'}
+          >
+            <LinkIcon className="h-4 w-4" />
+          </Button>
           
           <Button
             variant="ghost"
@@ -159,26 +161,12 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
             className="h-8 w-8 p-0"
             title="Add Image"
           >
-            <Image className="h-4 w-4" />
+            <ImageIcon className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Font Size and Alignment */}
-        <div className="flex items-center space-x-2">
-          <span className="text-xs text-muted-foreground">Font Size:</span>
-          <select
-            onChange={(e) => setFontSize(e.target.value)}
-            className="text-xs border rounded px-2 py-1"
-            defaultValue="16px"
-          >
-            {fontSizes.map(size => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-          
-          <div className="w-px h-6 bg-border mx-2" />
-          
-          <span className="text-xs text-muted-foreground">Alignment:</span>
+        {/* Text Alignment */}
+        <div className="flex items-center space-x-1">
           <Button
             variant={editor.isActive({ textAlign: 'left' }) ? 'default' : 'ghost'}
             size="sm"
@@ -219,21 +207,29 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
             <AlignJustify className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Font Size */}
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">Font Size:</span>
+          <select
+            onChange={(e) => setFontSize(e.target.value)}
+            className="text-sm border rounded px-2 py-1"
+            defaultValue="16px"
+          >
+            {fontSizes.map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
       </div>
-      
+
       {/* Editor Content */}
-      <div className={cn(
-        "min-h-[300px] max-h-[500px] overflow-y-auto",
-        theme === 'dark' ? 'prose-invert' : ''
-      )}>
-        <EditorContent editor={editor} />
-      </div>
-      
-      {/* Placeholder Help */}
-      <div className="border-t bg-muted/30 p-2 text-xs text-muted-foreground">
-        <p>Use <code className="bg-muted px-1 rounded">((column_name))</code> to insert dynamic content from your Google Sheet.</p>
-        <p>Example: <code className="bg-muted px-1 rounded">Hello ((name)), welcome to ((company))!</code></p>
-        <p>Tip: You can paste formatted text, images, and links directly into the editor.</p>
+      <EditorContent editor={editor} />
+
+      {/* Tips */}
+      <div className="p-2 text-xs text-muted-foreground bg-muted/30 border-t">
+        💡 Tip: You can paste formatted text, images, and links directly into the editor. 
+        Use placeholders like ((name)) for dynamic content.
       </div>
     </div>
   )

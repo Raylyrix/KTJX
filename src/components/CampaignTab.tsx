@@ -9,106 +9,185 @@ import EmailPreview from './EmailPreview'
 import GoogleSheetPreview from './GoogleSheetPreview'
 import CampaignSettings from './CampaignSettings'
 import { useTheme } from '@/contexts/ThemeContext'
+import { Loader2, Mail, Database, Settings, Eye } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface CampaignTabProps {
   tabId: string
-  sessionId: string | null
+  gmailAccount: string | null
+  isAuthenticated: boolean
+  onAuthenticate: () => void
   onTitleChange: (title: string) => void
-  onAddTab: (sessionId?: string) => void
 }
 
-export default function CampaignTab({ tabId, sessionId, onTitleChange, onAddTab }: CampaignTabProps) {
-  const { sessions, authenticateGmail } = useAuth()
-  const { currentSheet, loadGoogleSheet, sendCampaign } = useCampaign()
+export default function CampaignTab({ 
+  tabId, 
+  gmailAccount, 
+  isAuthenticated, 
+  onAuthenticate, 
+  onTitleChange 
+}: CampaignTabProps) {
+  const { user, isAuthenticated: globalIsAuthenticated } = useAuth()
+  const { 
+    googleSheetData, 
+    loadGoogleSheet, 
+    sendCampaign, 
+    extractPlaceholders, 
+    replacePlaceholders,
+    isLoading: campaignLoading,
+    error: campaignError
+  } = useCampaign()
   const { resolvedTheme } = useTheme()
   
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(sessionId)
   const [sheetUrl, setSheetUrl] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('compose')
 
-  // Update tab title when session changes
+  // Update tab title when Gmail account changes
   useEffect(() => {
-    if (selectedSessionId) {
-      const session = sessions.find(s => s.id === selectedSessionId)
-      if (session) {
-        onTitleChange(`${session.email} - Campaign`)
-      }
+    if (gmailAccount) {
+      onTitleChange(`${gmailAccount} - Campaign`)
     } else {
       onTitleChange('New Campaign')
     }
-  }, [selectedSessionId, sessions, onTitleChange])
+  }, [gmailAccount, onTitleChange])
+
+  // Show campaign errors
+  useEffect(() => {
+    if (campaignError) {
+      toast.error(campaignError)
+    }
+  }, [campaignError])
 
   const handleConnectAccount = async () => {
     try {
-      const session = await authenticateGmail()
-      if (session) {
-        setSelectedSessionId(session.id)
-        onAddTab(session.id)
-      }
+      await onAuthenticate()
     } catch (error) {
       console.error('Failed to connect account:', error)
+      toast.error('Failed to connect Gmail account')
     }
   }
 
   const handleLoadSheet = async () => {
-    if (!selectedSessionId || !sheetUrl.trim()) {
+    if (!sheetUrl.trim()) {
+      toast.error('Please enter a Google Sheets URL')
       return
     }
 
     setIsLoading(true)
     try {
-      const success = await loadGoogleSheet(sheetUrl, selectedSessionId)
-      if (success) {
-        // Extract placeholders from subject and body
-        const allText = `${subject} ${body}`
-        const placeholders = extractPlaceholders(allText)
-        console.log('Detected placeholders:', placeholders)
+      // Extract spreadsheet ID from URL
+      const urlMatch = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+      if (!urlMatch) {
+        throw new Error('Invalid Google Sheets URL')
+      }
+      
+      const spreadsheetId = urlMatch[1]
+      await loadGoogleSheet(spreadsheetId)
+      
+      // Extract placeholders from subject and body
+      const allText = `${subject} ${body}`
+      const placeholders = extractPlaceholders(allText)
+      if (placeholders.length > 0) {
+        toast.success(`Detected ${placeholders.length} placeholders: ${placeholders.join(', ')}`)
       }
     } catch (error) {
       console.error('Failed to load sheet:', error)
+      toast.error('Failed to load Google Sheet')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSendCampaign = async () => {
-    if (!selectedSessionId || !subject.trim() || !body.trim() || !currentSheet) {
+    if (!gmailAccount) {
+      toast.error('Please connect a Gmail account first')
+      return
+    }
+
+    if (!subject.trim()) {
+      toast.error('Please enter a subject line')
+      return
+    }
+
+    if (!body.trim()) {
+      toast.error('Please enter email content')
+      return
+    }
+
+    if (!googleSheetData) {
+      toast.error('Please load a Google Sheet first')
       return
     }
 
     try {
-      const campaignId = await sendCampaign({
-        sessionId: selectedSessionId,
-        subject,
-        body,
-      })
-      console.log('Campaign started:', campaignId)
+      // Extract email addresses from the sheet
+      const emailColumnIndex = googleSheetData.headers.findIndex(header => 
+        header.toLowerCase().includes('email')
+      )
+      
+      if (emailColumnIndex === -1) {
+        toast.error('No email column found in the sheet')
+        return
+      }
+
+      const recipients = googleSheetData.rows
+        .map(row => row[emailColumnIndex])
+        .filter(email => email && email.includes('@'))
+
+      if (recipients.length === 0) {
+        toast.error('No valid email addresses found in the sheet')
+        return
+      }
+
+      const result = await sendCampaign(tabId, recipients)
+      
+      if (result.success) {
+        toast.success(result.message)
+        // Clear form
+        setSubject('')
+        setBody('')
+        setSheetUrl('')
+      } else {
+        toast.error(result.message)
+      }
     } catch (error) {
       console.error('Failed to send campaign:', error)
+      toast.error('Failed to send campaign')
     }
   }
 
-  const extractPlaceholders = (text: string): string[] => {
-    const regex = /\(\(([^)]+)\)\)/g
-    const placeholders: string[] = []
-    let match
-    
-    while ((match = regex.exec(text)) !== null) {
-      placeholders.push(match[1])
+  const handlePreviewEmail = () => {
+    if (!googleSheetData || !googleSheetData.rows.length) {
+      toast.error('Please load a Google Sheet first to preview')
+      return
     }
+
+    // Show preview with first row data
+    const firstRow = googleSheetData.rows[0]
+    const data: Record<string, string> = {}
+    googleSheetData.headers.forEach((header, index) => {
+      data[header] = firstRow[index] || ''
+    })
+
+    const previewSubject = replacePlaceholders(subject, data)
+    const previewBody = replacePlaceholders(body, data)
     
-    return [...new Set(placeholders)]
+    // This would open a preview modal or switch to preview tab
+    console.log('Preview:', { previewSubject, previewBody })
+    setActiveTab('preview')
   }
 
-  if (!selectedSessionId) {
+  if (!isAuthenticated && !globalIsAuthenticated) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-4">
-          <h2 className="text-2xl font-semibold">Welcome to Gmail Campaign Desktop</h2>
-          <p className="text-muted-foreground max-w-md">
-            Connect your Gmail account to start creating and sending email campaigns.
+          <div className="text-6xl">📧</div>
+          <h2 className="text-2xl font-bold">Connect Your Gmail Account</h2>
+          <p className="text-muted-foreground">
+            To start creating campaigns, you need to connect your Gmail account first.
           </p>
           <Button onClick={handleConnectAccount} size="lg">
             Connect Gmail Account
@@ -118,115 +197,140 @@ export default function CampaignTab({ tabId, sessionId, onTitleChange, onAddTab 
     )
   }
 
-  const currentSession = sessions.find(s => s.id === selectedSessionId)
-
   return (
-    <div className="h-full flex flex-col">
-      {/* Session Info */}
-      <div className="border-b p-4 bg-muted/30">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
-              {currentSession?.email.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h3 className="font-medium">{currentSession?.email}</h3>
-              <p className="text-sm text-muted-foreground">Connected Account</p>
-            </div>
-          </div>
-          
+    <div className="h-full flex flex-col p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Campaign Manager</h1>
+          {gmailAccount && (
+            <p className="text-muted-foreground">
+              Connected to: <span className="font-medium text-green-600">{gmailAccount}</span>
+            </p>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
           <Button
             variant="outline"
-            onClick={() => setSelectedSessionId(null)}
+            onClick={handlePreviewEmail}
+            disabled={!googleSheetData || !subject.trim() || !body.trim()}
           >
-            Switch Account
+            <Eye className="mr-2 h-4 w-4" />
+            Preview
+          </Button>
+          <Button
+            onClick={handleSendCampaign}
+            disabled={!googleSheetData || !subject.trim() || !body.trim() || campaignLoading}
+          >
+            {campaignLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            Send Campaign
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <Tabs defaultValue="compose" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="compose">Compose</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="sheet">Google Sheet</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="compose" className="flex items-center space-x-2">
+            <Mail className="h-4 w-4" />
+            <span>Compose</span>
+          </TabsTrigger>
+          <TabsTrigger value="data" className="flex items-center space-x-2">
+            <Database className="h-4 w-4" />
+            <span>Data</span>
+          </TabsTrigger>
+          <TabsTrigger value="preview" className="flex items-center space-x-2">
+            <Eye className="h-4 w-4" />
+            <span>Preview</span>
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
+            <span>Settings</span>
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="compose" className="flex-1 overflow-hidden">
-            <div className="h-full flex flex-col p-4 space-y-4">
-              {/* Google Sheet URL */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Google Sheet URL</label>
-                <div className="flex space-x-2">
-                  <Input
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                    value={sheetUrl}
-                    onChange={(e) => setSheetUrl(e.target.value)}
-                  />
-                  <Button
-                    onClick={handleLoadSheet}
-                    disabled={!sheetUrl.trim() || isLoading}
-                  >
-                    {isLoading ? 'Loading...' : 'Load Sheet'}
-                  </Button>
-                </div>
-              </div>
+        <TabsContent value="compose" className="space-y-6">
+          {/* Campaign Form */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Subject Line</label>
+              <Input
+                placeholder="Enter your email subject..."
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Email Content</label>
+              <RichTextEditor
+                value={body}
+                onChange={setBody}
+                theme={resolvedTheme}
+              />
+            </div>
+          </div>
+        </TabsContent>
 
-              {/* Subject */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Subject</label>
+        <TabsContent value="data" className="space-y-6">
+          {/* Google Sheets Integration */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Google Sheets URL</label>
+              <div className="flex space-x-2 mt-1">
                 <Input
-                  placeholder="Enter email subject..."
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  value={sheetUrl}
+                  onChange={(e) => setSheetUrl(e.target.value)}
+                  className="flex-1"
                 />
-              </div>
-
-              {/* Body */}
-              <div className="space-y-2 flex-1">
-                <label className="text-sm font-medium">Email Body</label>
-                <div className="flex-1 min-h-0">
-                  <RichTextEditor
-                    value={body}
-                    onChange={setBody}
-                    theme={resolvedTheme}
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-2 pt-4 border-t">
-                <Button variant="outline">Save as Template</Button>
                 <Button
-                  onClick={handleSendCampaign}
-                  disabled={!subject.trim() || !body.trim() || !currentSheet}
+                  onClick={handleLoadSheet}
+                  disabled={!sheetUrl.trim() || isLoading}
                 >
-                  Send Campaign
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Database className="mr-2 h-4 w-4" />
+                  )}
+                  Load Sheet
                 </Button>
               </div>
             </div>
-          </TabsContent>
 
-          <TabsContent value="preview" className="flex-1 overflow-hidden">
+            {googleSheetData && (
+              <GoogleSheetPreview data={googleSheetData} />
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preview" className="space-y-6">
+          {/* Email Preview */}
+          {googleSheetData && subject && body ? (
             <EmailPreview
               subject={subject}
               body={body}
-              sheetData={currentSheet}
-              session={currentSession}
+              sheetData={googleSheetData}
+              replacePlaceholders={replacePlaceholders}
             />
-          </TabsContent>
+          ) : (
+            <div className="text-center text-muted-foreground py-12">
+              <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Load a Google Sheet and compose your email to see a preview</p>
+            </div>
+          )}
+        </TabsContent>
 
-          <TabsContent value="sheet" className="flex-1 overflow-hidden">
-            <GoogleSheetPreview sheetData={currentSheet} />
-          </TabsContent>
-
-          <TabsContent value="settings" className="flex-1 overflow-hidden">
-            <CampaignSettings />
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent value="settings" className="space-y-6">
+          {/* Campaign Settings */}
+          <CampaignSettings />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

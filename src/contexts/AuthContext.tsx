@@ -1,192 +1,30 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-// Google APIs moved to Electron main process
-import toast from 'react-hot-toast'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-interface GmailSession {
-  id: string
+export interface GmailUser {
   email: string
+  name: string
   accessToken: string
   refreshToken: string
   expiryDate: number
-  signature?: string
+  signature: string
 }
 
 interface AuthContextType {
-  sessions: GmailSession[]
-  addSession: (session: GmailSession) => void
-  removeSession: (sessionId: string) => void
-  getSession: (sessionId: string) => GmailSession | undefined
-  authenticateGmail: () => Promise<GmailSession | null>
-  refreshToken: (sessionId: string) => Promise<boolean>
+  user: GmailUser | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  error: string | null
+  
+  authenticateGmail: () => Promise<{ success: boolean; message: string }>
+  refreshToken: () => Promise<{ success: boolean; message: string }>
+  signOut: () => void
+  
+  // Utility functions
+  isTokenExpired: () => boolean
+  getSignature: () => string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-// Google OAuth credentials moved to Electron main process
-// These will be handled via IPC calls
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [sessions, setSessions] = useState<GmailSession[]>([])
-  const [isMounted, setIsMounted] = useState(false)
-
-  // Load sessions from localStorage on mount
-  useEffect(() => {
-    setIsMounted(true)
-    
-    try {
-      const savedSessions = localStorage.getItem('gmail_sessions')
-      if (savedSessions) {
-        const parsed = JSON.parse(savedSessions)
-        if (Array.isArray(parsed)) {
-          setSessions(parsed)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load saved sessions:', error)
-    }
-  }, [])
-
-  // Save sessions to localStorage whenever they change
-  useEffect(() => {
-    if (!isMounted) return
-    
-    try {
-      localStorage.setItem('gmail_sessions', JSON.stringify(sessions))
-    } catch (error) {
-      console.error('Failed to save sessions:', error)
-    }
-  }, [sessions, isMounted])
-
-  const addSession = useCallback((session: GmailSession) => {
-    setSessions(prev => {
-      const existing = prev.find(s => s.id === session.id)
-      if (existing) {
-        return prev.map(s => s.id === session.id ? session : s)
-      }
-      return [...prev, session]
-    })
-  }, [])
-
-  const removeSession = useCallback((sessionId: string) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId))
-  }, [])
-
-  const getSession = useCallback((sessionId: string) => {
-    return sessions.find(s => s.id === sessionId)
-  }, [sessions])
-
-  const authenticateGmail = useCallback(async (): Promise<GmailSession | null> => {
-    try {
-      // Use Electron IPC for OAuth instead of direct Google API calls
-      if (window.electronAPI?.startGoogleOAuth) {
-        try {
-          const result = await window.electronAPI.startGoogleOAuth()
-          if (result.success) {
-            const session: GmailSession = {
-              id: `session_${Date.now()}`,
-              email: result.email,
-              accessToken: result.accessToken,
-              refreshToken: result.refreshToken,
-              expiryDate: result.expiryDate,
-              signature: result.signature
-            }
-            return session
-          } else {
-            toast.error(result.error || 'Authentication failed')
-            return null
-          }
-        } catch (error) {
-          console.error('IPC authentication error:', error)
-          toast.error('Authentication failed')
-          return null
-        }
-      } else {
-        // Fallback to mock for development
-        const mockSession: GmailSession = {
-          id: `session_${Date.now()}`,
-          email: `user${sessions.length + 1}@gmail.com`,
-          accessToken: `mock_token_${Date.now()}`,
-          refreshToken: `mock_refresh_${Date.now()}`,
-          expiryDate: Date.now() + 3600000, // 1 hour
-          signature: `Best regards,\nUser ${sessions.length + 1}\nGmail Campaign Manager`
-        }
-        
-        toast.success(`Connected to ${mockSession.email} (Mock Mode)`)
-        return mockSession
-      }
-    } catch (error) {
-      console.error('Authentication failed:', error)
-      toast.error('Authentication failed')
-      return null
-    }
-  }, [sessions.length])
-
-  const refreshToken = useCallback(async (sessionId: string): Promise<boolean> => {
-    const session = getSession(sessionId)
-    if (!session || !session.refreshToken) return false
-
-    try {
-      // Use Electron IPC for token refresh
-      if (window.electronAPI?.refreshGoogleToken) {
-        try {
-          const result = await window.electronAPI.refreshGoogleToken(session.refreshToken)
-          if (result.success && result.accessToken) {
-            // Update session with new token
-            const updatedSession: GmailSession = {
-              ...session,
-              accessToken: result.accessToken,
-              expiryDate: result.expiryDate || Date.now() + 3600000
-            }
-            addSession(updatedSession)
-            return true
-          }
-          return false
-        } catch (error) {
-          console.error('IPC token refresh error:', error)
-          return false
-        }
-      } else {
-        // Fallback to mock for development
-        console.log('Mock token refresh for development')
-        return true
-      }
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      return false
-    }
-  }, [getSession, addSession])
-
-  const value: AuthContextType = {
-    sessions,
-    addSession,
-    removeSession,
-    getSession,
-    authenticateGmail,
-    refreshToken
-  }
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!isMounted) {
-    return (
-      <AuthContext.Provider value={{
-        sessions: [],
-        addSession: () => {},
-        removeSession: () => {},
-        getSession: () => undefined,
-        authenticateGmail: async () => null,
-        refreshToken: async () => false
-      }}>
-        {children}
-      </AuthContext.Provider>
-    )
-  }
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
 
 export function useAuth() {
   const context = useContext(AuthContext)
@@ -194,4 +32,161 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+}
+
+interface AuthProviderProps {
+  children: ReactNode
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<GmailUser | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+    return () => setIsMounted(false)
+  }, [])
+
+  useEffect(() => {
+    if (!isMounted) return
+    
+    // Load user from localStorage
+    const savedUser = localStorage.getItem('gmailUser')
+    if (savedUser) {
+      try {
+        const userData = JSON.parse(savedUser)
+        // Check if token is expired
+        if (userData.expiryDate && userData.expiryDate > Date.now()) {
+          setUser(userData)
+        } else {
+          // Token expired, try to refresh
+          localStorage.removeItem('gmailUser')
+          refreshToken()
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+        localStorage.removeItem('gmailUser')
+      }
+    }
+  }, [isMounted])
+
+  // Save user to localStorage whenever it changes
+  useEffect(() => {
+    if (isMounted) {
+      if (user) {
+        localStorage.setItem('gmailUser', JSON.stringify(user))
+      } else {
+        localStorage.removeItem('gmailUser')
+      }
+    }
+  }, [user, isMounted])
+
+  const authenticateGmail = async (): Promise<{ success: boolean; message: string }> => {
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      if (window.electronAPI) {
+        const result = await window.electronAPI.startGoogleOAuth()
+        if (result.success) {
+          const userData: GmailUser = {
+            email: result.email,
+            name: result.email.split('@')[0], // Extract name from email
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+            expiryDate: result.expiryDate,
+            signature: result.signature
+          }
+          setUser(userData)
+          return { success: true, message: `Successfully authenticated as ${result.email}` }
+        } else {
+          throw new Error(result.error || 'Authentication failed')
+        }
+      } else {
+        // Fallback for development
+        throw new Error('Gmail authentication requires Electron')
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
+      setError(errorMessage)
+      return { success: false, message: errorMessage }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const refreshToken = async (): Promise<{ success: boolean; message: string }> => {
+    if (!user?.refreshToken) {
+      return { success: false, message: 'No refresh token available' }
+    }
+
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      if (window.electronAPI) {
+        const result = await window.electronAPI.refreshGoogleToken(user.refreshToken)
+        if (result.success) {
+          const updatedUser = {
+            ...user,
+            accessToken: result.accessToken,
+            expiryDate: result.expiryDate
+          }
+          setUser(updatedUser)
+          return { success: true, message: 'Token refreshed successfully' }
+        } else {
+          throw new Error(result.error || 'Token refresh failed')
+        }
+      } else {
+        // Fallback for development
+        throw new Error('Token refresh requires Electron')
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Token refresh failed'
+      setError(errorMessage)
+      // If refresh fails, sign out the user
+      signOut()
+      return { success: false, message: errorMessage }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const signOut = () => {
+    setUser(null)
+    setError(null)
+  }
+
+  const isTokenExpired = (): boolean => {
+    if (!user?.expiryDate) return true
+    return Date.now() >= user.expiryDate
+  }
+
+  const getSignature = (): string => {
+    return user?.signature || 'Best regards,\nGmail Campaign Manager'
+  }
+
+  if (!isMounted) {
+    return <div>Loading...</div>
+  }
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user && !isTokenExpired(),
+    isLoading,
+    error,
+    authenticateGmail,
+    refreshToken,
+    signOut,
+    isTokenExpired,
+    getSignature
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }

@@ -1,8 +1,9 @@
 import React from 'react'
-import { X, Mail, FileText, History, Settings, Plus, LogOut } from 'lucide-react'
+import { X, Mail, FileText, History, Settings, Plus, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useCampaign } from '@/contexts/CampaignContext'
 
 interface SidebarProps {
   isOpen: boolean
@@ -10,13 +11,14 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { sessions, authenticateGmail, removeSession } = useAuth()
+  const { user, isAuthenticated, authenticateGmail, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { templates, history } = useCampaign()
 
   const handleAddAccount = async () => {
     try {
-      const session = await authenticateGmail()
-      if (session) {
+      const result = await authenticateGmail()
+      if (result.success) {
         onClose()
       }
     } catch (error) {
@@ -24,8 +26,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   }
 
-  const handleRemoveAccount = (sessionId: string) => {
-    removeSession(sessionId)
+  const handleSignOut = () => {
+    signOut()
+    onClose()
+  }
+
+  const handleThemeToggle = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
   return (
@@ -52,87 +59,125 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
         
         <div className="flex flex-col h-full">
+          {/* User Info */}
+          {isAuthenticated && user && (
+            <div className="p-4 border-b">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
+                  {user.email.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">Connected</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <a href="#campaigns">
-                <Mail className="mr-2 h-4 w-4" />
-                Campaigns
-              </a>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start" 
+              onClick={() => {
+                // This would navigate to campaigns view
+                console.log('Navigate to campaigns')
+                onClose()
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Campaigns
+              {templates.length > 0 && (
+                <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                  {templates.length}
+                </span>
+              )}
             </Button>
             
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <a href="#templates">
-                <FileText className="mr-2 h-4 w-4" />
-                Templates
-              </a>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => {
+                // This would navigate to templates view
+                console.log('Navigate to templates')
+                onClose()
+              }}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Templates
+              {templates.length > 0 && (
+                <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                  {templates.length}
+                </span>
+              )}
             </Button>
             
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <a href="#history">
-                <History className="mr-2 h-4 w-4" />
-                History
-              </a>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => {
+                // This would navigate to history view
+                console.log('Navigate to history')
+                onClose()
+              }}
+            >
+              <History className="mr-2 h-4 w-4" />
+              History
+              {history.length > 0 && (
+                <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                  {history.length}
+                </span>
+              )}
             </Button>
             
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <a href="#settings">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </a>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => {
+                // This would navigate to settings view
+                console.log('Navigate to settings')
+                onClose()
+              }}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
             </Button>
           </nav>
           
-          {/* Accounts Section */}
-          <div className="border-t p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium">Gmail Accounts</h3>
+          {/* Account Management */}
+          <div className="border-t p-4 space-y-3">
+            {!isAuthenticated ? (
               <Button
-                variant="ghost"
-                size="icon"
+                variant="outline"
+                className="w-full"
                 onClick={handleAddAccount}
-                className="h-6 w-6"
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="mr-2 h-3 w-3" />
+                Connect Gmail Account
               </Button>
-            </div>
-            
-            <div className="space-y-2">
-              {sessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between p-2 rounded-md bg-muted/50"
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={handleThemeToggle}
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-sm truncate">{session.email}</span>
+                  <div className="mr-2 h-4 w-4">
+                    {theme === 'light' ? '🌙' : '☀️'}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveAccount(session.id)}
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                  >
-                    <LogOut className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-              
-              {sessions.length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p className="text-sm">No accounts connected</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddAccount}
-                    className="mt-2"
-                  >
-                    <Plus className="mr-2 h-3 w-3" />
-                    Add Account
-                  </Button>
-                </div>
-              )}
-            </div>
+                  {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,30 +8,45 @@ import { generateId } from '@/lib/utils'
 
 interface Tab {
   id: string
-  sessionId: string | null
+  gmailAccount: string | null
   title: string
   isNew: boolean
+  isAuthenticated: boolean
 }
 
 export default function TabManager() {
-  const { sessions } = useAuth()
+  const { user, isAuthenticated, authenticateGmail } = useAuth()
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: 'new', sessionId: null, title: 'New Campaign', isNew: true }
+    { id: 'new', gmailAccount: null, title: 'New Campaign', isNew: true, isAuthenticated: false }
   ])
   const [activeTab, setActiveTab] = useState('new')
 
-  const addTab = useCallback((sessionId?: string) => {
-    const session = sessionId ? sessions.find(s => s.id === sessionId) : null
-    const newTab: Tab = {
-      id: generateId(),
-      sessionId: sessionId || null,
-      title: session ? `${session.email} - Campaign` : 'New Campaign',
-      isNew: !sessionId
+  const addTab = useCallback(async (gmailAccount?: string) => {
+    let newTab: Tab
+    
+    if (gmailAccount) {
+      // Tab with specific Gmail account
+      newTab = {
+        id: generateId(),
+        gmailAccount,
+        title: `${gmailAccount} - Campaign`,
+        isNew: false,
+        isAuthenticated: true
+      }
+    } else {
+      // New tab that needs authentication
+      newTab = {
+        id: generateId(),
+        gmailAccount: null,
+        title: 'New Campaign',
+        isNew: true,
+        isAuthenticated: false
+      }
     }
     
     setTabs(prev => [...prev, newTab])
     setActiveTab(newTab.id)
-  }, [sessions])
+  }, [])
 
   const removeTab = useCallback((tabId: string) => {
     if (tabs.length <= 1) return
@@ -51,6 +66,38 @@ export default function TabManager() {
     ))
   }, [])
 
+  const handleAuthenticateTab = useCallback(async (tabId: string) => {
+    try {
+      const result = await authenticateGmail()
+      if (result.success && user) {
+        // Update the tab with authenticated user info
+        setTabs(prev => prev.map(tab => 
+          tab.id === tabId 
+            ? { 
+                ...tab, 
+                gmailAccount: user.email, 
+                title: `${user.email} - Campaign`,
+                isNew: false,
+                isAuthenticated: true 
+              }
+            : tab
+        ))
+      }
+    } catch (error) {
+      console.error('Authentication failed for tab:', error)
+    }
+  }, [authenticateGmail, user])
+
+  const handleNewTabWithAuth = useCallback(async () => {
+    if (isAuthenticated && user) {
+      // Create new tab with current authenticated user
+      await addTab(user.email)
+    } else {
+      // Create new tab that needs authentication
+      await addTab()
+    }
+  }, [isAuthenticated, user, addTab])
+
   return (
     <div className="h-full flex flex-col">
       {/* Tab Bar */}
@@ -64,7 +111,12 @@ export default function TabManager() {
                   value={tab.id}
                   className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:shadow-none"
                 >
-                  <span className="truncate max-w-32">{tab.title}</span>
+                  <div className="flex items-center space-x-2">
+                    {tab.isAuthenticated && tab.gmailAccount && (
+                      <User className="h-3 w-3 text-green-600" title={tab.gmailAccount} />
+                    )}
+                    <span className="truncate max-w-32">{tab.title}</span>
+                  </div>
                   {tab.id !== 'new' && (
                     <Button
                       variant="ghost"
@@ -83,37 +135,30 @@ export default function TabManager() {
             </TabsList>
             
             <div className="flex items-center space-x-2 px-4">
-              {sessions.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addTab()}
-                  className="h-8"
-                >
-                  <Plus className="mr-2 h-3 w-3" />
-                  New Tab
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNewTabWithAuth}
+                className="h-8"
+              >
+                <Plus className="mr-2 h-3 w-3" />
+                New Tab
+              </Button>
             </div>
           </div>
           
           {/* Tab Content */}
-          <div className="flex-1 overflow-hidden">
-            {tabs.map((tab) => (
-              <TabsContent
-                key={tab.id}
-                value={tab.id}
-                className="h-full data-[state=inactive]:hidden"
-              >
-                <CampaignTab
-                  tabId={tab.id}
-                  sessionId={tab.sessionId}
-                  onTitleChange={(title) => updateTabTitle(tab.id, title)}
-                  onAddTab={addTab}
-                />
-              </TabsContent>
-            ))}
-          </div>
+          {tabs.map((tab) => (
+            <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
+              <CampaignTab
+                tabId={tab.id}
+                gmailAccount={tab.gmailAccount}
+                isAuthenticated={tab.isAuthenticated}
+                onAuthenticate={() => handleAuthenticateTab(tab.id)}
+                onTitleChange={(title) => updateTabTitle(tab.id, title)}
+              />
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
     </div>

@@ -8,10 +8,10 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "electron",
+    "rootDir": ".",
     "resolveJsonModule": true,
     "types": ["node", "electron"]
   },
-  "include": ["electron/**/*"],
+  "include": ["electron/**/*", "preload/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -13,10 +13,10 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, './preload/index.js'),
       sandbox: false,
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true
     }
   })
 
@@ -33,7 +33,7 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, './index.html'))
   }
 }
 
@@ -205,6 +205,53 @@ ipcMain.handle('select-file', async () => {
     return result.filePaths[0]
   }
   return null
+})
+
+// IPC handlers for Google Sheets
+ipcMain.handle('loadGoogleSheet', async (event, spreadsheetId: string, sheetName?: string) => {
+  try {
+    // This would use the Google Sheets API to load data
+    // For now, return mock data structure
+    const mockData = {
+      id: spreadsheetId,
+      name: sheetName || 'Sheet1',
+      headers: ['name', 'email', 'company', 'role'],
+      rows: [
+        ['John Doe', 'john@example.com', 'Tech Corp', 'Manager'],
+        ['Jane Smith', 'jane@example.com', 'Design Studio', 'Designer'],
+        ['Bob Johnson', 'bob@example.com', 'Marketing Inc', 'Director']
+      ],
+      rowCount: 3,
+      lastUpdated: Date.now()
+    }
+    
+    return { success: true, data: mockData }
+  } catch (error) {
+    console.error('Error loading Google Sheet:', error)
+    return { success: false, error: 'Failed to load Google Sheet' }
+  }
+})
+
+// IPC handlers for campaign sending
+ipcMain.handle('sendCampaign', async (event, template: any, recipients: string[]) => {
+  try {
+    // This would use the Gmail API to send emails
+    // For now, simulate sending process
+    console.log('Sending campaign:', { template, recipients })
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    return { 
+      success: true, 
+      sentCount: recipients.length,
+      failedCount: 0,
+      message: `Campaign sent to ${recipients.length} recipients`
+    }
+  } catch (error) {
+    console.error('Error sending campaign:', error)
+    return { success: false, error: 'Failed to send campaign' }
+  }
 })
 
 // IPC handlers for app updates
