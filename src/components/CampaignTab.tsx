@@ -45,14 +45,14 @@ export default function CampaignTab({
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('compose')
 
-  // Update tab title when Gmail account changes
+  // Update tab title when Gmail account changes - only when it actually changes
   useEffect(() => {
-    if (gmailAccount) {
-      onTitleChange(`${gmailAccount} - Campaign`)
-    } else {
-      onTitleChange('New Campaign')
+    const newTitle = gmailAccount ? `${gmailAccount} - Campaign` : 'New Campaign'
+    // Only call onTitleChange if the title actually changed
+    if (newTitle !== 'New Campaign' || gmailAccount) {
+      onTitleChange(newTitle)
     }
-  }, [gmailAccount, onTitleChange])
+  }, [gmailAccount]) // Remove onTitleChange from dependencies
 
   // Show campaign errors
   useEffect(() => {

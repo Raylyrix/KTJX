@@ -1,12 +1,11 @@
 import React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
-import TextStyle from '@tiptap/extension-text-style'
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
+import { TextStyle } from '@tiptap/extension-text-style'
+import { Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -22,7 +21,9 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3, 4, 5, 6]
-        }
+        },
+        // Remove underline from StarterKit since we're adding it separately
+        underline: false
       }),
       Underline,
       Link.configure({
@@ -115,7 +116,7 @@ export default function RichTextEditor({ value, onChange, theme }: RichTextEdito
             className="h-8 w-8 p-0"
             title="Underline"
           >
-            <UnderlineIcon className="h-4 w-4" />
+            <Underline className="h-4 w-4" />
           </Button>
         </div>
 

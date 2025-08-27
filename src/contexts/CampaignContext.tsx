@@ -187,8 +187,21 @@ export function CampaignProvider({ children }: CampaignProviderProps) {
           throw new Error(result.error || 'Failed to load Google Sheet')
         }
       } else {
-        // Fallback for development
-        throw new Error('Google Sheets integration requires Electron')
+        // Fallback for web development - simulate Google Sheets data
+        console.log('Running in web mode - using mock data')
+        const mockData: GoogleSheetData = {
+          id: spreadsheetId,
+          name: sheetName || 'Sheet1',
+          headers: ['name', 'email', 'company', 'role'],
+          rows: [
+            ['John Doe', 'john@example.com', 'Tech Corp', 'Manager'],
+            ['Jane Smith', 'jane@example.com', 'Design Studio', 'Designer'],
+            ['Bob Johnson', 'bob@example.com', 'Marketing Inc', 'Director']
+          ],
+          rowCount: 3,
+          lastUpdated: Date.now()
+        }
+        setGoogleSheetData(mockData)
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load Google Sheet')

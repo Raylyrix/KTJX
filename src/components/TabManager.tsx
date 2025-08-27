@@ -89,14 +89,10 @@ export default function TabManager() {
   }, [authenticateGmail, user])
 
   const handleNewTabWithAuth = useCallback(async () => {
-    if (isAuthenticated && user) {
-      // Create new tab with current authenticated user
-      await addTab(user.email)
-    } else {
-      // Create new tab that needs authentication
-      await addTab()
-    }
-  }, [isAuthenticated, user, addTab])
+    // Always create a new tab that requires authentication
+    // Don't share the current user's authentication
+    await addTab()
+  }, [addTab])
 
   return (
     <div className="h-full flex flex-col">
