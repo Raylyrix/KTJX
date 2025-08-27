@@ -1,6 +1,6 @@
 {
   "name": "gmail-campaign-desktop",
-  "version": "1.0.0",
+  "version": "1.0.9",
   "description": "Professional Gmail Campaign Desktop App with Google Cloud OAuth",
   "main": "dist/main.js",
   "homepage": "./",
