@@ -37,15 +37,21 @@ jobs:
       - name: Build application
         run: npm run build
         
-      - name: Build Electron app
-        run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            npm run dist:win
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npm run dist:mac
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            npm run dist:linux
-          fi
+      - name: Build Electron app (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run dist:win
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build Electron app (macOS)
+        if: matrix.os == 'macos-latest'
+        run: npm run dist:mac
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build Electron app (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run dist:linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
