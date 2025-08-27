@@ -1,0 +1,5 @@
+[33m3ce37cc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mv1.0.10[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update package.json version to 1.0.9 and add successful Windows build - v1.0.9
+[33m6cadabe[m[33m ([m[1;33mtag: [m[1;33mv1.0.9[m[33m)[m Fix build failure: Remove unused TipTap extension dependencies - v1.0.2
+[33m1c6ae97[m Fix preload script path and add Gmail signature display - v1.0.1
+[33mc623171[m Fix critical issues: Remove duplicate TipTap extensions, fix infinite re-render loop, add web fallbacks, implement separate tab authentication, and fix toolbar duplicate buttons
+[33m015b0ce[m Fix missing TipTap extensions and dependencies - RichTextEditor now fully functional with all features working

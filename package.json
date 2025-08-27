@@ -1,8 +1,8 @@
 {
   "name": "gmail-campaign-desktop",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "Professional Gmail Campaign Desktop App with Google Cloud OAuth",
-  "main": "dist/main.js",
+  "main": "dist/electron/main.js",
   "homepage": "./",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
@@ -90,9 +90,9 @@
       "buildResources": "assets"
     },
     "files": [
-      "dist/**/*",
-      "dist/main.js",
+      "dist/electron/main.js",
       "dist/index.html",
+      "dist/assets/**/*",
       "dist/preload/**/*",
       "node_modules/**/*"
     ],
@@ -117,6 +117,12 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/main.js",
+        "to": "main.js"
+      }
     ],
     "publish": {
       "provider": "github",
