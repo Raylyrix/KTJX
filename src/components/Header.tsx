@@ -2,6 +2,7 @@ import React from 'react'
 import { Menu, Sun, Moon, Monitor } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/ThemeContext'
+import About from './About'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -28,6 +29,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
         
         <div className="ml-auto flex items-center space-x-2">
+          <About />
           <Button
             variant="ghost"
             size="icon"

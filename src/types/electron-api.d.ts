@@ -35,8 +35,18 @@ declare global {
         signature?: string
         error?: string
       }>
-      checkForUpdates: () => Promise<{ hasUpdate: boolean; version: string }>
-      downloadUpdate: () => Promise<{ success: boolean; message: string }>
+      checkForUpdates: () => Promise<{ 
+        hasUpdate: boolean; 
+        version: string; 
+        currentVersion: string;
+        error?: string;
+      }>
+      downloadUpdate: () => Promise<{ 
+        success: boolean; 
+        message: string; 
+        restartRequired?: boolean;
+        error?: string;
+      }>
     }
   }
 }

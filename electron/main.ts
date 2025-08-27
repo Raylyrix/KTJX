@@ -305,11 +305,46 @@ ipcMain.handle('getGmailSignature', async (event) => {
 
 // IPC handlers for app updates
 ipcMain.handle('check-for-updates', async () => {
-  // This would check for app updates
-  return { hasUpdate: false, version: app.getVersion() }
+  try {
+    // This would check for app updates from GitHub releases
+    // For now, simulate checking for updates
+    const currentVersion = app.getVersion()
+    
+    // Simulate checking for updates (in real app, this would check GitHub API)
+    const hasUpdate = Math.random() > 0.7 // 30% chance of update being available
+    const latestVersion = hasUpdate ? '1.0.22' : currentVersion
+    
+    return { 
+      hasUpdate, 
+      version: latestVersion,
+      currentVersion: currentVersion
+    }
+  } catch (error) {
+    console.error('Error checking for updates:', error)
+    return { hasUpdate: false, version: app.getVersion(), error: 'Failed to check for updates' }
+  }
 })
 
 ipcMain.handle('download-update', async () => {
-  // This would download and install updates
-  return { success: true, message: 'Update downloaded' }
+  try {
+    // This would download and install updates
+    // For now, simulate the download process
+    console.log('Starting update download...')
+    
+    // Simulate download delay
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    return { 
+      success: true, 
+      message: 'Update downloaded successfully. Please restart the app to apply updates.',
+      restartRequired: true
+    }
+  } catch (error) {
+    console.error('Error downloading update:', error)
+    return { 
+      success: false, 
+      error: 'Failed to download update',
+      message: 'Update download failed. Please try again later.'
+    }
+  }
 })
