@@ -1,6 +1,6 @@
 {
   "name": "gmail-campaign-desktop",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Professional Gmail Campaign Desktop App with Google Cloud OAuth",
   "main": "dist/main.js",
   "homepage": "./",
@@ -101,24 +101,38 @@
 
 
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "nsis-web",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64", "ia32"]
+        }
+      ]
     },
     "mac": {
-      "target": "pkg",
-      "icon": "assets/icon.icns"
+      "target": "pkg"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": "AppImage"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
     },
     "asar": true,
+    "compression": "maximum",
+    "removePackageScripts": true,
+    "removePackageKeywords": true,
 
     "publish": {
       "provider": "github",
