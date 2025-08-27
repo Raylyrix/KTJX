@@ -1,6 +1,6 @@
 {
   "name": "gmail-campaign-desktop",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Professional Gmail Campaign Desktop App with Google Cloud OAuth",
   "main": "dist/main.js",
   "homepage": "./",
@@ -86,10 +86,14 @@
     "appId": "com.gmailcampaign.desktop",
     "productName": "Gmail Campaign Desktop",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "assets"
     },
     "files": [
       "dist/**/*",
+      "dist/main.js",
+      "dist/index.html",
+      "dist/preload/**/*",
       "node_modules/**/*"
     ],
     "win": {
@@ -110,6 +114,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/**/*"
+    ],
     "publish": {
       "provider": "github",
       "owner": "Raylyrix",
