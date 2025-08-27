@@ -1,5 +1,5 @@
-[33m3ce37cc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mv1.0.10[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update package.json version to 1.0.9 and add successful Windows build - v1.0.9
-[33m6cadabe[m[33m ([m[1;33mtag: [m[1;33mv1.0.9[m[33m)[m Fix build failure: Remove unused TipTap extension dependencies - v1.0.2
-[33m1c6ae97[m Fix preload script path and add Gmail signature display - v1.0.1
-[33mc623171[m Fix critical issues: Remove duplicate TipTap extensions, fix infinite re-render loop, add web fallbacks, implement separate tab authentication, and fix toolbar duplicate buttons
-[33m015b0ce[m Fix missing TipTap extensions and dependencies - RichTextEditor now fully functional with all features working
+[33mbe9c6d6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mv1.0.20[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix GitHub Actions: Correct artifact paths and add debugging for proper executable builds - v1.0.19
+[33me14b01e[m[33m ([m[1;33mtag: [m[1;33mv1.0.19[m[33m)[m Fix Windows build: Generate proper .exe installers and portable apps - v1.0.18
+[33m89fab19[m[33m ([m[1;33mtag: [m[1;33mv1.0.18[m[33m)[m Fix build configuration: Correct main entry point and ASAR packaging for all platforms - v1.0.17
+[33m1a5479a[m[33m ([m[1;33mtag: [m[1;33mv1.0.17[m[33m, [m[1;33mtag: [m[1;33mv1.0.16[m[33m)[m FIXED: Blank screen issue resolved - Working build with ASAR disabled - v1.0.15
+[33m8191127[m[33m ([m[1;33mtag: [m[1;33mv1.0.15[m[33m)[m Fix Windows build: Use platform-specific build steps instead of bash syntax for PowerShell compatibility - v1.0.14

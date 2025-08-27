@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectAttachments: () => ipcRenderer.invoke('select-attachments'),
   loadGoogleSheet: (spreadsheetId: string, sheetName?: string) => ipcRenderer.invoke('loadGoogleSheet', spreadsheetId, sheetName),
   sendCampaign: (template: any, recipients: string[]) => ipcRenderer.invoke('sendCampaign', template, recipients),
+  getGmailSignature: () => ipcRenderer.invoke('getGmailSignature'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update')
 })

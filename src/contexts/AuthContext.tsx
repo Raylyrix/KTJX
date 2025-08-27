@@ -21,7 +21,7 @@ interface AuthContextType {
   
   // Utility functions
   isTokenExpired: () => boolean
-  getSignature: () => string
+  getSignature: () => Promise<string>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -164,8 +164,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return Date.now() >= user.expiryDate
   }
 
-  const getSignature = (): string => {
-    return user?.signature || 'Best regards,\nGmail Campaign Manager'
+  const getSignature = async (): Promise<string> => {
+    if (user?.signature) {
+      return user.signature
+    }
+    
+    // Try to fetch signature from Gmail if we have an access token
+    if (window.electronAPI && user?.accessToken) {
+      try {
+        const result = await window.electronAPI.getGmailSignature()
+        if (result.success && result.signature) {
+          // Update user with new signature
+          setUser(prev => prev ? { ...prev, signature: result.signature! } : null)
+          return result.signature
+        }
+      } catch (error) {
+        console.error('Failed to fetch signature:', error)
+      }
+    }
+    
+    return 'Best regards,\nGmail Campaign Manager'
   }
 
   if (!isMounted) {

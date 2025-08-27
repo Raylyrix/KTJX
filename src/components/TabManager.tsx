@@ -82,6 +82,19 @@ export default function TabManager() {
               }
             : tab
         ))
+        
+        // Also update any other tabs that don't have authentication
+        setTabs(prev => prev.map(tab => 
+          tab.id !== tabId && !tab.isAuthenticated
+            ? { 
+                ...tab, 
+                gmailAccount: user.email, 
+                title: `${user.email} - Campaign`,
+                isNew: false,
+                isAuthenticated: true 
+              }
+            : tab
+        ))
       }
     } catch (error) {
       console.error('Authentication failed for tab:', error)

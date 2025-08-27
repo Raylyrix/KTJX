@@ -128,10 +128,13 @@ ipcMain.handle('startGoogleOAuth', async () => {
                 throw new Error('No access token received')
               }
 
-              // Get user info
+              // Get user info and signature
               oauth2Client.setCredentials(tokens)
               const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
               const profile = await gmail.users.getProfile({ userId: 'me' })
+              
+              // Use a personalized signature
+              const signature = `Best regards,\n${profile.data.emailAddress || 'User'}\nGmail Campaign Manager`
               
               authWindow.close()
               
@@ -141,7 +144,7 @@ ipcMain.handle('startGoogleOAuth', async () => {
                 accessToken: tokens.access_token,
                 refreshToken: tokens.refresh_token || '',
                 expiryDate: tokens.expiry_date || Date.now() + 3600000,
-                signature: `Best regards,\n${profile.data.emailAddress || 'User'}\nGmail Campaign Manager`
+                signature
               })
             } catch (error) {
               console.error('OAuth error:', error)
@@ -227,8 +230,8 @@ ipcMain.handle('select-attachments', async () => {
 // IPC handlers for Google Sheets
 ipcMain.handle('loadGoogleSheet', async (event, spreadsheetId: string, sheetName?: string) => {
   try {
-    // This would use the Google Sheets API to load data
     // For now, return mock data structure
+    // TODO: Implement real Google Sheets API integration with user's access token
     const mockData = {
       id: spreadsheetId,
       name: sheetName || 'Sheet1',
@@ -236,9 +239,11 @@ ipcMain.handle('loadGoogleSheet', async (event, spreadsheetId: string, sheetName
       rows: [
         ['John Doe', 'john@example.com', 'Tech Corp', 'Manager'],
         ['Jane Smith', 'jane@example.com', 'Design Studio', 'Designer'],
-        ['Bob Johnson', 'bob@example.com', 'Marketing Inc', 'Director']
+        ['Bob Johnson', 'bob@example.com', 'Marketing Inc', 'Director'],
+        ['Alice Brown', 'alice@example.com', 'Sales Corp', 'Sales Rep'],
+        ['Charlie Wilson', 'charlie@example.com', 'Support Inc', 'Support']
       ],
-      rowCount: 3,
+      rowCount: 5,
       lastUpdated: Date.now()
     }
     
@@ -253,21 +258,48 @@ ipcMain.handle('loadGoogleSheet', async (event, spreadsheetId: string, sheetName
 ipcMain.handle('sendCampaign', async (event, template: any, recipients: string[]) => {
   try {
     // This would use the Gmail API to send emails
-    // For now, simulate sending process
+    // For now, simulate sending process with better feedback
     console.log('Sending campaign:', { template, recipients })
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Simulate API delay and progress
+    const totalRecipients = recipients.length
+    let sentCount = 0
+    let failedCount = 0
+    
+    for (let i = 0; i < totalRecipients; i++) {
+      // Simulate individual email sending
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Simulate some failures (10% failure rate)
+      if (Math.random() < 0.1) {
+        failedCount++
+      } else {
+        sentCount++
+      }
+    }
     
     return { 
       success: true, 
-      sentCount: recipients.length,
-      failedCount: 0,
-      message: `Campaign sent to ${recipients.length} recipients`
+      sentCount,
+      failedCount,
+      message: `Campaign completed: ${sentCount} sent, ${failedCount} failed`
     }
   } catch (error) {
     console.error('Error sending campaign:', error)
     return { success: false, error: 'Failed to send campaign' }
+  }
+})
+
+// IPC handler for getting Gmail signature
+ipcMain.handle('getGmailSignature', async (event) => {
+  try {
+    // This would use the stored access token to fetch the current signature
+    // For now, return a dynamic signature
+    const signature = `Best regards,\nGmail Campaign Manager\nSent via Gmail Campaign Desktop App`
+    return { success: true, signature }
+  } catch (error) {
+    console.error('Error getting Gmail signature:', error)
+    return { success: false, error: 'Failed to get signature' }
   }
 })
 

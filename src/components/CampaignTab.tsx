@@ -45,6 +45,7 @@ export default function CampaignTab({
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('compose')
   const [attachments, setAttachments] = useState<string[]>([])
+  const [signature, setSignature] = useState<string>('')
 
   // Update tab title when Gmail account changes - only when it actually changes
   useEffect(() => {
@@ -54,6 +55,22 @@ export default function CampaignTab({
       onTitleChange(newTitle)
     }
   }, [gmailAccount]) // Remove onTitleChange from dependencies
+
+  // Load signature when user is authenticated
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      const loadSignature = async () => {
+        try {
+          const sig = await user.getSignature()
+          setSignature(sig)
+        } catch (error) {
+          console.error('Failed to load signature:', error)
+          setSignature('Best regards,\nGmail Campaign Manager')
+        }
+      }
+      loadSignature()
+    }
+  }, [user, isAuthenticated])
 
   // Show campaign errors
   useEffect(() => {
@@ -226,18 +243,18 @@ export default function CampaignTab({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Campaign Manager</h1>
-                     {gmailAccount && (
-             <div className="space-y-1">
-               <p className="text-muted-foreground">
-                 Connected to: <span className="font-medium text-green-600">{gmailAccount}</span>
-               </p>
-               {user?.signature && (
-                 <p className="text-xs text-muted-foreground">
-                   Signature: <span className="font-mono bg-muted px-1 rounded">{user.signature}</span>
-                 </p>
-               )}
-             </div>
-           )}
+          {gmailAccount && (
+            <div className="space-y-1">
+              <p className="text-muted-foreground">
+                Connected to: <span className="font-medium text-green-600">{gmailAccount}</span>
+              </p>
+              {signature && (
+                <p className="text-xs text-muted-foreground">
+                  Signature loaded ✓
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -304,6 +321,16 @@ export default function CampaignTab({
                 theme={resolvedTheme}
               />
             </div>
+
+            {/* Gmail Signature */}
+            {isAuthenticated && signature && (
+              <div>
+                <label className="text-sm font-medium">Gmail Signature</label>
+                <div className="mt-2 p-3 bg-muted rounded border">
+                  <pre className="text-sm whitespace-pre-wrap text-muted-foreground">{signature}</pre>
+                </div>
+              </div>
+            )}
 
             {/* File Attachments */}
             <div>

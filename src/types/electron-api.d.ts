@@ -30,6 +30,11 @@ declare global {
         message?: string
         error?: string
       }>
+      getGmailSignature: () => Promise<{
+        success: boolean
+        signature?: string
+        error?: string
+      }>
       checkForUpdates: () => Promise<{ hasUpdate: boolean; version: string }>
       downloadUpdate: () => Promise<{ success: boolean; message: string }>
     }
