@@ -55,12 +55,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
+      - name: List build outputs (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "=== Windows build outputs ==="
+          dir release-new
+          if (Test-Path "release-new/nsis-web") {
+            echo "NSIS Web outputs:"
+            dir release-new/nsis-web
+          }
+          
+      - name: List build outputs (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "=== macOS build outputs ==="
+          ls -la release-new/
+          
+      - name: List build outputs (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "=== Linux build outputs ==="
+          ls -la release-new/
+          
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-build
           path: |
-            release/
+            release-new/
             dist/
             
   release:
@@ -82,13 +104,58 @@ jobs:
           echo "Available artifacts:"
           find artifacts -type f -name "*" | head -20
           
+      - name: Verify Windows artifacts
+        run: |
+          echo "=== Windows artifacts ==="
+          if [ -d "artifacts/windows-latest-build" ]; then
+            echo "Windows build directory exists"
+            ls -la artifacts/windows-latest-build/
+            if [ -d "artifacts/windows-latest-build/release-new" ]; then
+              echo "Windows release-new directory:"
+              ls -la artifacts/windows-latest-build/release-new/
+            fi
+          else
+            echo "Windows build directory not found"
+          fi
+          
+      - name: Verify macOS artifacts
+        run: |
+          echo "=== macOS artifacts ==="
+          if [ -d "artifacts/macos-latest-build" ]; then
+            echo "macOS build directory exists"
+            ls -la artifacts/macos-latest-build/
+            if [ -d "artifacts/macos-latest-build/release-new" ]; then
+              echo "macOS release-new directory:"
+              ls -la artifacts/macos-latest-build/release-new/
+            fi
+          else
+            echo "macOS build directory not found"
+          fi
+          
+      - name: Verify Linux artifacts
+        run: |
+          echo "=== Linux artifacts ==="
+          if [ -d "artifacts/ubuntu-latest-build" ]; then
+            echo "Linux build directory exists"
+            ls -la artifacts/ubuntu-latest-build/
+            if [ -d "artifacts/ubuntu-latest-build/release-new" ]; then
+              echo "Linux release-new directory:"
+              ls -la artifacts/ubuntu-latest-build/release-new/
+            fi
+          else
+            echo "Linux build directory not found"
+          fi
+          
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/windows-latest-build/release/*.exe
-            artifacts/macos-latest-build/release/*.pkg
-            artifacts/ubuntu-latest-build/release/*.AppImage
+            artifacts/windows-latest-build/release-new/*.exe
+            artifacts/macos-latest-build/release-new/*.pkg
+            artifacts/ubuntu-latest-build/release-new/*.AppImage
+            artifacts/windows-latest-build/release-new/*.msi
+            artifacts/ubuntu-latest-build/release-new/*.deb
+            artifacts/ubuntu-latest-build/release-new/*.rpm
           draft: false
           prerelease: false
           generate_release_notes: true
