@@ -1,14 +1,14 @@
 {
   "name": "gmail-campaign-desktop",
-  "version": "1.0.12",
+  "version": "1.0.15",
   "description": "Professional Gmail Campaign Desktop App with Google Cloud OAuth",
-  "main": "dist/electron/main.js",
+  "main": "main.js",
   "homepage": "./",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
     "dev:renderer": "vite",
     "dev:main": "tsc -p tsconfig.electron.json && electron .",
-    "build": "npm run build:renderer && npm run build:main",
+    "build": "npm run build:renderer && npm run build:main && npm run postbuild",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.electron.json",
     "dist": "npm run build && electron-builder --win --publish=never",
@@ -16,6 +16,7 @@
     "dist:mac": "npm run build && electron-builder --mac --publish=never",
     "dist:linux": "npm run build && electron-builder --linux --publish=never",
     "dist:all": "npm run build && electron-builder --win --mac --linux --publish=never",
+    "postbuild": "node -e \"const fs = require('fs'); const path = require('path'); if (fs.existsSync('dist/electron/main.js')) { fs.copyFileSync('dist/electron/main.js', 'dist/main.js'); console.log('Copied main.js to dist root'); } else { console.log('Source file not found'); } console.log('Files in dist:', fs.readdirSync('dist')); console.log('Files in dist/electron:', fs.readdirSync('dist/electron'));\"",
     "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
@@ -86,16 +87,24 @@
     "appId": "com.gmailcampaign.desktop",
     "productName": "Gmail Campaign Desktop",
     "directories": {
-      "output": "release",
+      "output": "release-new",
       "buildResources": "assets"
     },
     "files": [
-      "dist/electron/main.js",
+      "dist/main.js",
       "dist/index.html",
       "dist/assets/**/*",
       "dist/preload/**/*",
-      "node_modules/**/*"
+      "dist/electron/**/*"
     ],
+    "extraFiles": [
+      {
+        "from": "dist/main.js",
+        "to": "main.js"
+      }
+    ],
+
+
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico"
@@ -115,15 +124,7 @@
       "createStartMenuShortcut": true
     },
     "asar": true,
-    "asarUnpack": [
-      "node_modules/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "dist/main.js",
-        "to": "main.js"
-      }
-    ],
+
     "publish": {
       "provider": "github",
       "owner": "Raylyrix",

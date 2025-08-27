@@ -10,7 +10,7 @@
     "outDir": "dist",
     "rootDir": ".",
     "resolveJsonModule": true,
-    "types": ["node", "electron"]
+    "types": ["node"]
   },
   "include": ["electron/**/*", "preload/**/*"],
   "exclude": ["node_modules", "dist"]

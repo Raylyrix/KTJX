@@ -100,3 +100,5 @@ jspm_packages/
 
 # Electron
 dist-electron/
+release/
+release-new/
