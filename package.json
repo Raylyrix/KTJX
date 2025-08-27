@@ -1,8 +1,8 @@
 {
   "name": "gmail-campaign-desktop",
-  "version": "1.0.15",
+  "version": "1.0.17",
   "description": "Professional Gmail Campaign Desktop App with Google Cloud OAuth",
-  "main": "main.js",
+  "main": "dist/main.js",
   "homepage": "./",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
@@ -97,12 +97,7 @@
       "dist/preload/**/*",
       "dist/electron/**/*"
     ],
-    "extraFiles": [
-      {
-        "from": "dist/main.js",
-        "to": "main.js"
-      }
-    ],
+
 
 
     "win": {
