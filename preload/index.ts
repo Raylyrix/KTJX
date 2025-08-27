@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startGoogleOAuth: () => ipcRenderer.invoke('startGoogleOAuth'),
   refreshGoogleToken: (refreshToken: string) => ipcRenderer.invoke('refreshGoogleToken', refreshToken),
   selectFile: () => ipcRenderer.invoke('select-file'),
+  selectAttachments: () => ipcRenderer.invoke('select-attachments'),
   loadGoogleSheet: (spreadsheetId: string, sheetName?: string) => ipcRenderer.invoke('loadGoogleSheet', spreadsheetId, sheetName),
   sendCampaign: (template: any, recipients: string[]) => ipcRenderer.invoke('sendCampaign', template, recipients),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

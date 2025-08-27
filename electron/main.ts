@@ -207,6 +207,23 @@ ipcMain.handle('select-file', async () => {
   return null
 })
 
+// IPC handler for file attachments
+ipcMain.handle('select-attachments', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] },
+      { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'txt'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  })
+  
+  if (!result.canceled && result.filePaths.length > 0) {
+    return result.filePaths
+  }
+  return []
+})
+
 // IPC handlers for Google Sheets
 ipcMain.handle('loadGoogleSheet', async (event, spreadsheetId: string, sheetName?: string) => {
   try {

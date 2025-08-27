@@ -114,17 +114,15 @@ export default function TabManager() {
                     <span className="truncate max-w-32">{tab.title}</span>
                   </div>
                   {tab.id !== 'new' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-2 h-4 w-4 hover:bg-destructive hover:text-destructive-foreground"
+                    <div
+                      className="ml-2 h-4 w-4 hover:bg-destructive hover:text-destructive-foreground rounded cursor-pointer flex items-center justify-center text-destructive"
                       onClick={(e) => {
                         e.stopPropagation()
                         removeTab(tab.id)
                       }}
                     >
                       <X className="h-3 w-3" />
-                    </Button>
+                    </div>
                   )}
                 </TabsTrigger>
               ))}

@@ -17,6 +17,7 @@ declare global {
         error?: string
       }>
       selectFile: () => Promise<string | null>
+      selectAttachments: () => Promise<string[]>
       loadGoogleSheet: (spreadsheetId: string, sheetName?: string) => Promise<{
         success: boolean
         data?: any

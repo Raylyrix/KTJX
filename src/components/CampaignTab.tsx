@@ -44,6 +44,7 @@ export default function CampaignTab({
   const [body, setBody] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('compose')
+  const [attachments, setAttachments] = useState<string[]>([])
 
   // Update tab title when Gmail account changes - only when it actually changes
   useEffect(() => {
@@ -68,6 +69,28 @@ export default function CampaignTab({
       console.error('Failed to connect account:', error)
       toast.error('Failed to connect Gmail account')
     }
+  }
+
+  const handleSelectAttachments = async () => {
+    try {
+      if (window.electronAPI) {
+        const files = await window.electronAPI.selectAttachments()
+        if (files && files.length > 0) {
+          setAttachments(files)
+          toast.success(`Selected ${files.length} attachment(s)`)
+        }
+      } else {
+        // Web fallback - simulate file selection
+        toast('File attachments require the desktop app', { icon: 'ℹ️' })
+      }
+    } catch (error) {
+      console.error('Failed to select attachments:', error)
+      toast.error('Failed to select attachments')
+    }
+  }
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleLoadSheet = async () => {
@@ -203,11 +226,18 @@ export default function CampaignTab({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Campaign Manager</h1>
-          {gmailAccount && (
-            <p className="text-muted-foreground">
-              Connected to: <span className="font-medium text-green-600">{gmailAccount}</span>
-            </p>
-          )}
+                     {gmailAccount && (
+             <div className="space-y-1">
+               <p className="text-muted-foreground">
+                 Connected to: <span className="font-medium text-green-600">{gmailAccount}</span>
+               </p>
+               {user?.signature && (
+                 <p className="text-xs text-muted-foreground">
+                   Signature: <span className="font-mono bg-muted px-1 rounded">{user.signature}</span>
+                 </p>
+               )}
+             </div>
+           )}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -273,6 +303,39 @@ export default function CampaignTab({
                 onChange={setBody}
                 theme={resolvedTheme}
               />
+            </div>
+
+            {/* File Attachments */}
+            <div>
+              <label className="text-sm font-medium">Attachments</label>
+              <div className="mt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={handleSelectAttachments}
+                  className="w-full"
+                >
+                  📎 Select Files
+                </Button>
+                
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Selected files:</p>
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <span className="text-sm truncate">{file.split('\\').pop()}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAttachment(index)}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>
