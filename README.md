@@ -1,208 +1,343 @@
-# Gmail Campaign Desktop
+# Taskforce Mailer: Advanced Analytics & AI System
 
-A professional cross-platform desktop application for creating and sending Gmail campaigns with Google Sheets integration, built with Electron, React, and TypeScript.
+Welcome to the Taskforce Mailer, now evolved into a world-class professional email intelligence and productivity platform! This monorepo contains the core services, shared packages, and applications for advanced email analytics and AI-powered features.
 
-## ✨ Features
+## 🚀 Project Overview
 
-- **🔐 Google OAuth Integration**: Secure authentication with Gmail accounts
-- **📊 Google Sheets Integration**: Load recipient data directly from spreadsheets
-- **✍️ Rich Text Editor**: WYSIWYG email composition with TipTap
-- **🎯 Dynamic Placeholders**: Personalize emails with `((column_name))` syntax
-- **📱 Multiple Sessions**: Manage multiple Gmail accounts in tabs
-- **📅 Campaign Scheduling**: Schedule campaigns for future delivery
-- **⚡ Batch Processing**: Send emails in configurable batches
-- **📝 Templates**: Save and reuse campaign templates
-- **📈 Real-time Preview**: See how emails look with actual data
-- **🎨 Theme Support**: Light, dark, and system themes
-- **🔄 Auto-updates**: Automatic updates via GitHub releases
+This project transforms the existing Taskforce Mailer into a comprehensive platform with:
 
-## 🚀 Quick Start
+- **📊 Advanced Analytics**: Email volume, response times, contact health, thread analysis, forecasting
+- **🤖 AI-Powered Features**: Summaries, smart replies, priority prediction, sentiment analysis, task extraction, conversational AI using OpenRouter LLMs
+- **👥 Team Collaboration**: Shared dashboards, manager views, delegation, RBAC
+- **⚡ Workflow Automations**: Rules engine, smart nudges, calendar integration
+- **🏢 Enterprise Features**: Compliance, custom metrics, API-first design, SSO
+- **📈 Reporting & Exports**: Automated reports in various formats with AI insights
+- **🎨 Modern UI/UX**: Analytics dashboards and AI console built with React, Tailwind, and charting libraries
 
-### Prerequisites
+## 🏗️ Monorepo Structure
 
-- Node.js 18+ 
-- npm or yarn
-- Google Cloud Console project with OAuth 2.0 credentials
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/gmail-campaign-desktop.git
-   cd gmail-campaign-desktop
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Setup Google OAuth**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-   - Enable Gmail API and Google Sheets API
-   - Create OAuth 2.0 credentials
-   - Add test users (only test users can authenticate)
-   - Update the credentials in `src/contexts/AuthContext.tsx`
-
-4. **Run the application**
-   ```bash
-   npm run dev
-   ```
-
-## 🏗️ Development
-
-### Project Structure
+This project uses `pnpm` workspaces for a monorepo setup:
 
 ```
-src/
-├── components/          # React components
-│   ├── ui/             # Reusable UI components
-│   ├── CampaignTab.tsx # Main campaign interface
-│   ├── RichTextEditor.tsx # WYSIWYG editor
-│   └── ...
-├── contexts/            # React contexts
-│   ├── AuthContext.tsx # Authentication state
-│   ├── CampaignContext.tsx # Campaign management
-│   └── ThemeContext.tsx # Theme management
-├── lib/                 # Utility functions
-└── main.tsx            # App entry point
-
-electron/
-└── main.ts             # Electron main process
-
-.github/
-└── workflows/          # CI/CD pipelines
+taskforce-mailer/
+├── apps/
+│   ├── desktop/          # Enhanced Electron desktop application
+│   └── web/             # React web-based analytics dashboard
+├── services/
+│   ├── analytics-api/   # Backend API for analytics data and aggregations
+│   ├── ai-service/      # Backend API for OpenRouter LLM integrations
+│   └── ingestion/       # Service for email data ingestion from Gmail
+├── packages/
+│   ├── shared-types/    # Shared TypeScript interfaces and types
+│   └── database/        # Prisma schema, migrations, and database client
+├── .env.example         # Example environment variables
+├── docker-compose.yml   # Docker Compose setup for local development
+├── pnpm-workspace.yaml  # pnpm workspace configuration
+└── README.md           # This file
 ```
 
-### Available Scripts
+## ⚙️ Tech Stack
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run dist` - Build Electron app
-- `npm run dist:win` - Build Windows installer
-- `npm run dist:mac` - Build macOS package
-- `npm run dist:linux` - Build Linux AppImage
+- **Backend**: Node.js, Express, PostgreSQL, Redis, Prisma, BullMQ (for queues)
+- **Frontend**: React, Next.js, Tailwind CSS, Recharts (for charts)
+- **AI Layer**: OpenRouter APIs (using `nvidia/nemotron-nano-9b-v2:free` model)
+- **Desktop**: Electron, Vite
+- **Containerization**: Docker, Docker Compose
+- **Language**: TypeScript
+- **Package Manager**: pnpm
 
-## 📱 Building Distributables
+## 🚀 Getting Started
 
-### Windows (NSIS Installer)
+Follow these steps to set up and run the project locally.
+
+### 1. Prerequisites
+
+- Node.js (v18 or higher)
+- pnpm (v8 or higher)
+- Docker & Docker Compose (optional, for local infrastructure)
+- Git
+
+### 2. Clone the Repository
+
 ```bash
-npm run dist:win
+git clone https://github.com/your-username/taskforce-mailer.git
+cd taskforce-mailer
 ```
 
-### macOS (PKG Package)
+### 3. Environment Setup
+
+Copy the example environment file and fill in your details:
+
 ```bash
-npm run dist:mac
+cp .env.example .env
 ```
 
-### Linux (AppImage)
+**Edit `.env`** with your credentials:
+- `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_URL`: Redis connection string  
+- `JWT_SECRET`: Strong, random secret for authentication
+- `OPENROUTER_API_KEY`: Your API key from [OpenRouter](https://openrouter.ai/keys)
+- `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: Gmail API credentials
+- `CONSENT_CONTENT`: Set to `true` to enable AI features that process email content
+
+### 4. Install Dependencies
+
 ```bash
-npm run dist:linux
+pnpm install
 ```
 
-## 🔧 Configuration
+### 5. Start Infrastructure (Optional)
 
-### Google OAuth Setup
+If using Docker for local development:
 
-1. **Create OAuth 2.0 credentials**
-   - Application type: Desktop application
-   - Scopes: Gmail API, Google Sheets API
-   - Redirect URI: `http://localhost`
-
-2. **Add test users**
-   - Only users added as test users can authenticate
-   - Maximum 100 test users per project
-
-3. **Update credentials**
-   - Replace the hardcoded credentials in `src/contexts/AuthContext.tsx`
-   - Keep credentials secure and don't commit to public repositories
-
-### Campaign Settings
-
-- **Batch Size**: Number of emails per batch (Gmail limit: 500/day)
-- **Batch Interval**: Time between batches in minutes
-- **Status Column**: Google Sheets column for tracking email status
-- **Scheduling**: Set future delivery date and time
-
-## 📊 Google Sheets Format
-
-Your Google Sheet should have:
-- **Headers row**: Column names (e.g., `email`, `name`, `company`)
-- **Data rows**: Recipient information
-- **Status column**: Optional column for tracking email status
-
-Example:
-| email | name | company | status |
-|-------|------|---------|---------|
-| john@example.com | John Doe | Tech Corp | |
-| jane@example.com | Jane Smith | Design Inc | |
-
-## ✉️ Email Templates
-
-Use placeholders to personalize emails:
-
-- **Subject**: `Welcome to ((company)), ((name))!`
-- **Body**: `Hi ((name)),\n\nThank you for joining ((company)).`
-
-The app automatically replaces `((column_name))` with values from each row.
-
-## 🔄 Auto-updates
-
-The app automatically checks for updates and downloads them from GitHub releases. To release a new version:
-
-1. **Create a tag**
-   ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
-   ```
-
-2. **GitHub Actions will automatically**
-   - Build for all platforms
-   - Create a release
-   - Generate update files
-   - Notify users of available updates
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-1. **OAuth Error**: Ensure credentials are correct and test users are added
-2. **Gmail API Quota**: Check your Google Cloud Console quotas
-3. **Build Errors**: Ensure Node.js version is 18+ and all dependencies are installed
-
-### Debug Mode
-
-Enable debug logging:
 ```bash
-DEBUG=* npm run dev
+pnpm docker:up
 ```
+
+This starts PostgreSQL and Redis. Verify with `docker-compose ps`.
+
+### 6. Database Setup
+
+Apply the Prisma schema to your database:
+
+```bash
+pnpm db:migrate
+```
+
+Build shared packages:
+
+```bash
+pnpm --filter @taskforce/shared-types build
+pnpm --filter @taskforce/database generate
+```
+
+### 7. Start Services
+
+Start all services in development mode:
+
+```bash
+pnpm services:dev
+```
+
+This runs:
+- Analytics API (port 4000)
+- AI Service (port 4001) 
+- Ingestion Service (port 4002)
+
+### 8. Start Web Dashboard
+
+In a new terminal:
+
+```bash
+pnpm --filter @taskforce/web dev
+```
+
+Visit `http://localhost:3000` to see the analytics dashboard.
+
+### 9. Start Desktop App (Optional)
+
+In another terminal:
+
+```bash
+pnpm desktop:dev
+```
+
+### 10. Verify Everything Works
+
+Check service health:
+
+```bash
+pnpm health
+```
+
+You should see `status: 'ok'` for all services.
+
+## 🧪 Testing
+
+Run tests for all packages:
+
+```bash
+pnpm test
+```
+
+## 📊 Features Overview
+
+### Analytics Dashboard
+- **Overview**: Key metrics, trends, and AI insights
+- **Email Analytics**: Volume trends, response times, engagement metrics
+- **Contact Management**: Top contacts, health scores, relationship tracking
+- **Thread Analysis**: Conversation patterns, resolution tracking
+- **AI Console**: Natural language queries about your email data
+
+### AI-Powered Features
+- **Smart Summaries**: AI-generated thread and email summaries
+- **Priority Classification**: Automatic email priority scoring
+- **Sentiment Analysis**: Tone analysis of email communications
+- **Task Extraction**: Identify actionable items from emails
+- **Natural Language Queries**: Ask questions about your data in plain English
+- **Smart Replies**: AI-suggested response drafts
+
+### Email Ingestion
+- **Gmail Integration**: Full Gmail API integration with OAuth
+- **Background Sync**: Automated email synchronization
+- **Real-time Updates**: Webhook-based real-time email processing
+- **Data Encryption**: Secure storage of email credentials
+
+### Team Features
+- **Multi-tenant Architecture**: Organization-based data isolation
+- **Role-based Access**: VIEWER, ANALYST, MANAGER, ADMIN roles
+- **Shared Dashboards**: Team-wide analytics and insights
+- **Manager Views**: Team performance monitoring
+
+## 🔧 Development Commands
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start all services in development
+pnpm services:dev
+
+# Start web dashboard
+pnpm --filter @taskforce/web dev
+
+# Start desktop app
+pnpm desktop:dev
+
+# Build all packages
+pnpm build
+
+# Run tests
+pnpm test
+
+# Lint code
+pnpm lint
+
+# Database operations
+pnpm db:migrate    # Run migrations
+pnpm db:studio     # Open Prisma Studio
+pnpm db:seed       # Seed database
+
+# Docker operations
+pnpm docker:up     # Start infrastructure
+pnpm docker:down   # Stop infrastructure
+pnpm docker:logs   # View logs
+
+# Health checks
+pnpm health        # Check all services
+```
+
+## 🏗️ Architecture
+
+### Backend Services
+
+**Analytics API** (`services/analytics-api/`)
+- RESTful API for email analytics data
+- Real-time metrics and aggregations
+- Multi-tenant data isolation
+- JWT-based authentication
+
+**AI Service** (`services/ai-service/`)
+- OpenRouter LLM integration
+- AI feature processing (summaries, sentiment, etc.)
+- Request tracking and cost monitoring
+- Content consent management
+
+**Ingestion Service** (`services/ingestion/`)
+- Gmail API integration
+- Background job processing with BullMQ
+- Email synchronization and processing
+- Token refresh and error handling
+
+### Frontend Applications
+
+**Web Dashboard** (`apps/web/`)
+- Next.js React application
+- Analytics dashboards with Recharts
+- AI console for natural language queries
+- Responsive design with Tailwind CSS
+
+**Desktop App** (`apps/desktop/`)
+- Enhanced Electron application
+- Integrated with analytics services
+- Offline capabilities
+- Native desktop features
+
+### Shared Packages
+
+**Database** (`packages/database/`)
+- Prisma schema and migrations
+- Database client generation
+- Multi-tenant data models
+
+**Shared Types** (`packages/shared-types/`)
+- TypeScript interfaces
+- Common data types
+- API response schemas
+
+## 🔐 Security & Privacy
+
+- **Data Encryption**: Sensitive data encrypted at rest
+- **JWT Authentication**: Secure API authentication
+- **Content Consent**: Explicit consent for AI processing
+- **Multi-tenant Isolation**: Organization-based data separation
+- **Rate Limiting**: API rate limiting and abuse prevention
 
 ## 🤝 Contributing
+
+Contributions are welcome! Please refer to the development guidelines:
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Add tests for new functionality
 5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see LICENSE file for details.
 
 ## 🆘 Support
 
+For support and questions:
 - Create an issue on GitHub
-- Check the documentation
-- Review common troubleshooting steps
+- Check the documentation in `/docs`
+- Review the API documentation in each service
 
-## 🔒 Security
+## 🗺️ Roadmap
 
-- OAuth credentials are hardcoded (as requested) but should be kept secure
-- Only test users can authenticate
-- All data is stored locally
-- No sensitive information is transmitted to external servers
+### Phase 1: Foundation ✅
+- [x] Monorepo setup with pnpm workspaces
+- [x] PostgreSQL + Redis infrastructure
+- [x] Prisma database schema
+- [x] OpenRouter AI integration
+
+### Phase 2: Core Services ✅
+- [x] Email ingestion service (Gmail)
+- [x] Analytics API with core endpoints
+- [x] AI service with LLM integrations
+
+### Phase 3: Frontend (In Progress)
+- [x] React web dashboard
+- [x] Analytics overview and charts
+- [x] AI console with natural language queries
+- [ ] Desktop app integration
+- [ ] Advanced analytics features
+
+### Phase 4: Advanced Features (Planned)
+- [ ] Outlook integration
+- [ ] Advanced AI features (smart replies, task extraction)
+- [ ] Team collaboration features
+- [ ] Workflow automations
+- [ ] Enterprise features (SSO, compliance)
+
+### Phase 5: Scale & Polish (Planned)
+- [ ] Performance optimization
+- [ ] Comprehensive testing
+- [ ] Documentation
+- [ ] Deployment guides
+- [ ] Monitoring and observability
 
 ---
 
-**Note**: This application is designed for legitimate email marketing campaigns. Please ensure compliance with email marketing laws and Gmail's terms of service.
+**Built with ❤️ using TypeScript, React, Node.js, and AI**

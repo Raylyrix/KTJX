@@ -1,0 +1,283 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Multi-tenant organization structure
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  users       User[]
+  mailboxes   Mailbox[]
+  analytics   AnalyticsAggregate[]
+  aiRequests  AIRequest[]
+  rules       AutomationRule[]
+
+  @@map("organizations")
+}
+
+// Users with role-based access control
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  role           UserRole @default(VIEWER)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mailboxes      Mailbox[]
+  messages       Message[]
+  analytics      AnalyticsAggregate[]
+
+  @@map("users")
+}
+
+// Email accounts (Gmail, Outlook, etc.)
+model Mailbox {
+  id             String     @id @default(cuid())
+  email          String
+  provider       MailProvider
+  accessToken    String     @db.Text // Encrypted
+  refreshToken   String?    @db.Text // Encrypted
+  tokenExpiry    DateTime?
+  isActive       Boolean    @default(true)
+  lastSyncAt     DateTime?
+  organizationId String
+  userId         String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relationships
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       Message[]
+  threads        Thread[]
+
+  @@unique([email, organizationId])
+  @@map("mailboxes")
+}
+
+// Email messages (metadata only for privacy)
+model Message {
+  id           String   @id @default(cuid())
+  messageId    String   // Provider message ID
+  threadId     String   // Provider thread ID
+  subject      String
+  fromEmail    String
+  fromName     String?
+  toEmails     String[] // Array of recipient emails
+  ccEmails     String[]
+  bccEmails    String[]
+  timestamp    DateTime
+  isRead       Boolean  @default(false)
+  isSent       Boolean  @default(false) // true if sent by user
+  hasAttachments Boolean @default(false)
+  attachmentCount Int    @default(0)
+  labels       String[] // Gmail labels or Outlook categories
+  bodyLength   Int      @default(0) // Character count only
+  sentiment    Float?   // AI-generated sentiment score (-1 to 1)
+  priority     Priority @default(MEDIUM) // AI-generated priority
+  category     String?  // AI-generated category (Finance, HR, etc.)
+  mailboxId    String
+  userId       String
+  organizationId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relationships
+  mailbox      Mailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread       Thread @relation(fields: [threadId], references: [id])
+  analytics    AnalyticsAggregate[]
+
+  @@unique([messageId, organizationId])
+  @@index([timestamp])
+  @@index([threadId])
+  @@index([mailboxId])
+  @@map("messages")
+}
+
+// Email threads for conversation analysis
+model Thread {
+  id             String   @id @default(cuid())
+  threadId       String   // Provider thread ID
+  subject        String
+  messageCount   Int      @default(0)
+  lastMessageAt  DateTime
+  responseTime   Int?     // Average response time in minutes
+  isResolved     Boolean  @default(false)
+  mailboxId      String
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  mailbox        Mailbox @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  messages       Message[]
+
+  @@unique([threadId, organizationId])
+  @@index([lastMessageAt])
+  @@map("threads")
+}
+
+// Contacts for relationship analysis
+model Contact {
+  id             String   @id @default(cuid())
+  email          String
+  name           String?
+  domain         String
+  messageCount   Int      @default(0)
+  responseRate   Float    @default(0) // 0 to 1
+  avgResponseTime Int?    // Average response time in minutes
+  lastContactAt  DateTime?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([email, organizationId])
+  @@index([domain])
+  @@map("contacts")
+}
+
+// Pre-computed analytics aggregates for performance
+model AnalyticsAggregate {
+  id             String      @id @default(cuid())
+  type           AggregateType
+  date           DateTime
+  value          Float
+  metadata       Json?       // Additional context data
+  organizationId String
+  userId         String?
+  messageId      String?
+  createdAt      DateTime    @default(now())
+
+  // Relationships
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message        Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([type, date, organizationId, userId])
+  @@index([type, date])
+  @@map("analytics_aggregates")
+}
+
+// AI requests for audit and cost tracking
+model AIRequest {
+  id             String      @id @default(cuid())
+  type           AIRequestType
+  promptHash     String      // SHA256 hash of prompt for privacy
+  model          String
+  tokensUsed     Int
+  cost           Float?      // Cost in USD
+  response       String?     @db.Text // Sanitized response
+  success        Boolean     @default(true)
+  error          String?
+  organizationId String
+  userId         String?
+  createdAt      DateTime    @default(now())
+
+  // Relationships
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([promptHash])
+  @@index([organizationId, createdAt])
+  @@map("ai_requests")
+}
+
+// Automation rules for workflow
+model AutomationRule {
+  id             String      @id @default(cuid())
+  name           String
+  condition      Json        // Rule condition logic
+  action         Json        // Action to take
+  priority       Int         @default(0)
+  isActive       Boolean     @default(true)
+  organizationId String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relationships
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("automation_rules")
+}
+
+// Audit log for compliance
+model AuditLog {
+  id             String    @id @default(cuid())
+  action         String
+  resource       String
+  resourceId     String?
+  userId         String?
+  organizationId String
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+// Enums
+enum UserRole {
+  VIEWER
+  ANALYST
+  MANAGER
+  ADMIN
+}
+
+enum MailProvider {
+  GMAIL
+  OUTLOOK
+  EXCHANGE
+  IMAP
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AggregateType {
+  EMAIL_VOLUME_SENT
+  EMAIL_VOLUME_RECEIVED
+  RESPONSE_TIME_AVERAGE
+  RESPONSE_TIME_MEDIAN
+  RESPONSE_TIME_P90
+  CONTACT_ENGAGEMENT
+  THREAD_LENGTH_AVERAGE
+  ATTACHMENT_PERCENTAGE
+  SENTIMENT_AVERAGE
+  PRIORITY_DISTRIBUTION
+  INTERNAL_VS_EXTERNAL_RATIO
+}
+
+enum AIRequestType {
+  SUMMARIZE_THREAD
+  GENERATE_REPLY
+  CLASSIFY_PRIORITY
+  ANALYZE_SENTIMENT
+  EXTRACT_TASKS
+  NATURAL_LANGUAGE_QUERY
+  AUTO_TAG
+  SMART_INSIGHTS
+}

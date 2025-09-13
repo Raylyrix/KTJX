@@ -1,0 +1,28 @@
+{
+  "name": "@taskforce/database",
+  "version": "1.0.0",
+  "description": "Database schema and migrations for Taskforce Mailer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:reset": "prisma migrate reset",
+    "seed": "tsx seed.ts",
+    "studio": "prisma studio",
+    "db:push": "prisma db push",
+    "db:pull": "prisma db pull"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.7.1",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

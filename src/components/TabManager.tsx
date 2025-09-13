@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react'
-import { Plus, X, User } from 'lucide-react'
+import { Plus, X, User, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/AuthContext'
 import CampaignTab from './CampaignTab'
+import AnalyticsTab from './AnalyticsTab'
 import { generateId } from '@/lib/utils'
 
 interface Tab {
@@ -12,12 +13,13 @@ interface Tab {
   title: string
   isNew: boolean
   isAuthenticated: boolean
+  type: 'campaign' | 'analytics'
 }
 
 export default function TabManager() {
   const { user, isAuthenticated, authenticateGmail } = useAuth()
   const [tabs, setTabs] = useState<Tab[]>([
-    { id: 'new', gmailAccount: null, title: 'New Campaign', isNew: true, isAuthenticated: false }
+    { id: 'new', gmailAccount: null, title: 'New Campaign', isNew: true, isAuthenticated: false, type: 'campaign' }
   ])
   const [activeTab, setActiveTab] = useState('new')
 
@@ -76,7 +78,7 @@ export default function TabManager() {
             ? { 
                 ...tab, 
                 gmailAccount: user.email, 
-                title: `${user.email} - Campaign`,
+                title: `${user.email} - ${tab.type === 'analytics' ? 'Analytics' : 'Campaign'}`,
                 isNew: false,
                 isAuthenticated: true 
               }
@@ -89,7 +91,7 @@ export default function TabManager() {
             ? { 
                 ...tab, 
                 gmailAccount: user.email, 
-                title: `${user.email} - Campaign`,
+                title: `${user.email} - ${tab.type === 'analytics' ? 'Analytics' : 'Campaign'}`,
                 isNew: false,
                 isAuthenticated: true 
               }
@@ -102,10 +104,45 @@ export default function TabManager() {
   }, [authenticateGmail, user])
 
   const handleNewTabWithAuth = useCallback(async () => {
-    // Always create a new tab that requires authentication
-    // Don't share the current user's authentication
+    // Create a new tab that requires authentication
+    // This allows users to have multiple tabs with different Gmail accounts
     await addTab()
   }, [addTab])
+
+  const handleNewTabWithDifferentAccount = useCallback(async () => {
+    // Create a new tab and immediately start authentication
+    // This is useful for users who want to manage multiple Gmail accounts
+    const newTabId = generateId()
+    const newTab: Tab = {
+      id: newTabId,
+      gmailAccount: null,
+      title: 'New Account - Campaign',
+      isNew: true,
+      isAuthenticated: false,
+      type: 'campaign'
+    }
+    
+    setTabs(prev => [...prev, newTab])
+    setActiveTab(newTabId)
+    
+    // Automatically start authentication for the new tab
+    setTimeout(() => handleAuthenticateTab(newTabId), 100)
+  }, [handleAuthenticateTab])
+
+  const handleAddAnalyticsTab = useCallback(async () => {
+    const newTabId = generateId()
+    const newTab: Tab = {
+      id: newTabId,
+      gmailAccount: null,
+      title: 'Analytics Dashboard',
+      isNew: true,
+      isAuthenticated: false,
+      type: 'analytics'
+    }
+    
+    setTabs(prev => [...prev, newTab])
+    setActiveTab(newTabId)
+  }, [])
 
   return (
     <div className="h-full flex flex-col">
@@ -147,9 +184,30 @@ export default function TabManager() {
                 size="sm"
                 onClick={handleNewTabWithAuth}
                 className="h-8"
+                title="Create a new campaign tab"
               >
                 <Plus className="mr-2 h-3 w-3" />
                 New Tab
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddAnalyticsTab}
+                className="h-8"
+                title="Open analytics dashboard"
+              >
+                <BarChart3 className="mr-2 h-3 w-3" />
+                Analytics
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNewTabWithDifferentAccount}
+                className="h-8"
+                title="Create a new tab with different Gmail account"
+              >
+                <User className="mr-2 h-3 w-3" />
+                New Account
               </Button>
             </div>
           </div>
@@ -157,13 +215,22 @@ export default function TabManager() {
           {/* Tab Content */}
           {tabs.map((tab) => (
             <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
-              <CampaignTab
-                tabId={tab.id}
-                gmailAccount={tab.gmailAccount}
-                isAuthenticated={tab.isAuthenticated}
-                onAuthenticate={() => handleAuthenticateTab(tab.id)}
-                onTitleChange={(title) => updateTabTitle(tab.id, title)}
-              />
+              {tab.type === 'analytics' ? (
+                <AnalyticsTab
+                  tabId={tab.id}
+                  gmailAccount={tab.gmailAccount}
+                  isAuthenticated={tab.isAuthenticated}
+                  onTitleChange={(title) => updateTabTitle(tab.id, title)}
+                />
+              ) : (
+                <CampaignTab
+                  tabId={tab.id}
+                  gmailAccount={tab.gmailAccount}
+                  isAuthenticated={tab.isAuthenticated}
+                  onAuthenticate={() => handleAuthenticateTab(tab.id)}
+                  onTitleChange={(title) => updateTabTitle(tab.id, title)}
+                />
+              )}
             </TabsContent>
           ))}
         </Tabs>
